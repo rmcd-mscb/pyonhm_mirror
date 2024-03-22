@@ -6,7 +6,8 @@ forcings on a daily basis.  In addition sub-seasonal to seasonal forecasts can a
 product of 48, 28-day ensembles, delivered daily, and seaonal forecasts using downscaled NMME product of 6-month forecasts,
 delivered once per month.
 
-<span style="color: red; font-weight: bold;">Attention:</span> This project is in the early stages of development.
+<span style="color: red; font-weight: bold;">Attention:</span> This project is in the early stages of development,
+particularly the forecasting elements.
 
 ## Getting started
 
