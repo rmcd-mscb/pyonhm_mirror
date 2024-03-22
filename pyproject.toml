@@ -17,7 +17,7 @@ cyclopts = "^2.4.2"
 docker = "^7.0.0"
 
 [tool.poetry.scripts]
-pyonhm = "pyonhm.docker_manager_2:main"
+pyonhm = "pyonhm.docker_manager:main"
 
 [build-system]
 requires = ["poetry-core"]

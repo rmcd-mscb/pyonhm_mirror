@@ -1,4 +1,4 @@
-# from cyclopts import App, Group, Parameter
+from cyclopts import App, Group, Parameter
 import argparse
 from io import BytesIO
 import docker
@@ -10,9 +10,11 @@ from pathlib import Path
 from typing_extensions import Annotated
 
 
-# app = App(default_parameter=Parameter(negative=()))
-# g_build_load = Group.create_ordered(name="Admin Commands", help="Build images and load supporting data into volume")
-# g_operational = Group.create_ordered(name="Operational Commands", help="NHM daily operational model methods")
+app = App(default_parameter=Parameter(negative=()))
+g_build_load = Group.create_ordered(name="Admin Commands", help="Build images and load supporting data into volume")
+g_operational = Group.create_ordered(name="Operational Commands", help="NHM daily operational model methods")
+g_sub_seasonal = Group.create_ordered(name="Sub-seasonal Forecast Commands", help="NHM sub-seasonal forecasts model methods")
+g_seasonal = Group.create_ordered(name="Seasonal Forecast Commands", help="NHM seasonal forecasts model methods")
 
 
 class DockerManager:
@@ -437,177 +439,131 @@ class DockerManager:
             except docker.errors.NotFound:
                 print("Container already removed or not found.")
 
+@app.command(group=g_operational)
+def run_operational(env_file: str, num_days: int=4, test:bool=False):
+    """
+    Runs the operational simulation using the DockerManager.
 
-def main():
-    parser = argparse.ArgumentParser(description="Manage Docker operations for NHM.")
-    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+    Args:
+        env_file: The path to the environment file.
+        num_days: The number of days to run the simulation for. Defaults to 4.
+        test: If True, runs the simulation in test mode. Defaults to False.
 
-    # Sub-command for building images
-    parser_build = subparsers.add_parser("build-images", help="Build Docker images.")
-    parser_build.add_argument(
-        "--no-cache", action="store_true", help="Build images without cache."
-    )
-    # parser_build.add_argument("--env-file", type=str, required=True, help="Path to the environment variables file.")
-
-    # Sub-command for loading data
-    parser_load = subparsers.add_parser("load-data", help="Download necessary data.")
-    parser_load.add_argument(
-        "--env-file",
-        type=str,
-        required=True,
-        help="Path to the environment variables file.",
-    )
-
-    # Sub-command for running operational tasks
-    parser_operational = subparsers.add_parser(
-        "run-operational", help="Run operational tasks."
-    )
-    parser_operational.add_argument(
-        "--env-file",
-        type=str,
-        required=True,
-        help="Path to the environment variables file.",
-    )
-
-    # Sub-command for running operational tasks
-    parser_operational_test = subparsers.add_parser(
-        "run-operational-test",
-        help="Run operational tasks for select period of time following last restart date.",
-    )
-    parser_operational_test.add_argument(
-        "--num-days",
-        type=int,
-        required=True,
-        help="Days to run following last restart date.",
-    )
-    parser_operational_test.add_argument(
-        "--env-file",
-        type=str,
-        required=True,
-        help="Path to the environment variables file.",
-    )
-
-    # Sub-command for fetching output
-    parser_fetch = subparsers.add_parser("fetch-output", help="Fetch output.")
-    parser_fetch.add_argument(
-        "--env-file",
-        type=str,
-        required=True,
-        help="Path to the environment variables file.",
-    )
-
-    args = parser.parse_args()
-
-    if args.command is None:
-        parser.print_help()
-        sys.exit(1)
-
+    Returns:
+        None
+    """
     docker_manager = DockerManager()
-    env_vars = utils.load_env_file(args.env_file) if "env_file" in args else {}
+    dict_env_vars = utils.load_env_file(env_file)
     if docker_manager.client is not None:
         print("Docker client initialized successfully.")
     else:
         print("Failed to initialize Docker client.")
     
-    if args.command == "build-images":
-        docker_manager.build_images(no_cache=args.no_cache)
-    elif args.command == "load-data":
-        docker_manager.load_data(env_vars=env_vars)
-    elif args.command == "run-operational":
-        docker_manager.operational_run(env_vars=env_vars, test=False)
-    elif args.command == "run-operational-test":
-        docker_manager.operational_run(
-            env_vars=env_vars, num_days=args.num_days, test=True
-        )
-    elif args.command == "fetch-output":
-        docker_manager.fetch_output(env_vars=env_vars)
+    docker_manager.operational_run(env_vars=dict_env_vars, test=test, num_days=num_days)
 
+@app.command(group=g_sub_seasonal)
+def run_sub_seasonal(env_file: str, num_days: int=4, test:bool=False):
+    """
+    Runs the sub-seasonal operational simulation using the DockerManager.
 
-# def run():
-#     parser = argparse.ArgumentParser(description="Manage Docker operations for NHM.")
-#     subparsers = parser.add_subparsers(dest="command", help="Available commands")
+    Args:
+        env_file: The path to the environment file.
+        num_days: The number of days to run the simulation for. Defaults to 4.
+        test: If True, runs the simulation in test mode. Defaults to False.
 
-#     # Sub-command for building images
-#     parser_build = subparsers.add_parser("build-images", help="Build Docker images.")
-#     parser_build.add_argument(
-#         "--no-cache", action="store_true", help="Build images without cache."
-#     )
-#     # parser_build.add_argument("--env-file", type=str, required=True, help="Path to the environment variables file.")
+    Returns:
+        None
+    """
+    docker_manager = DockerManager()
+    dict_env_vars = utils.load_env_file(env_file)
+    if docker_manager.client is not None:
+        print("Docker client initialized successfully.")
+    else:
+        print("Failed to initialize Docker client.")
+    
+    print("TODO")
 
-#     # Sub-command for loading data
-#     parser_load = subparsers.add_parser("load-data", help="Download necessary data.")
-#     parser_load.add_argument(
-#         "--env-file",
-#         type=str,
-#         required=True,
-#         help="Path to the environment variables file.",
-#     )
+@app.command(group=g_seasonal)
+def run_seasonal(env_file: str, num_days: int=4, test:bool=False):
+    """
+    Runs the seasonal operational simulation using the DockerManager.
 
-#     # Sub-command for running operational tasks
-#     parser_operational = subparsers.add_parser(
-#         "run-operational", help="Run operational tasks."
-#     )
-#     parser_operational.add_argument(
-#         "--env-file",
-#         type=str,
-#         required=True,
-#         help="Path to the environment variables file.",
-#     )
+    Args:
+        env_file: The path to the environment file.
+        num_days: The number of days to run the simulation for. Defaults to 4.
+        test: If True, runs the simulation in test mode. Defaults to False.
 
-#     # Sub-command for running operational tasks
-#     parser_operational_test = subparsers.add_parser(
-#         "run-operational-test",
-#         help="Run operational tasks for select period of time following last restart date.",
-#     )
-#     parser_operational_test.add_argument(
-#         "--num-days",
-#         type=int,
-#         required=True,
-#         help="Days to run following last restart date.",
-#     )
-#     parser_operational_test.add_argument(
-#         "--env-file",
-#         type=str,
-#         required=True,
-#         help="Path to the environment variables file.",
-#     )
+    Returns:
+        None
+    """
+    docker_manager = DockerManager()
+    dict_env_vars = utils.load_env_file(env_file)
+    if docker_manager.client is not None:
+        print("Docker client initialized successfully.")
+    else:
+        print("Failed to initialize Docker client.")
+    
+    print("TODO")
 
-#     # Sub-command for fetching output
-#     parser_fetch = subparsers.add_parser("fetch-output", help="Fetch output.")
-#     parser_fetch.add_argument(
-#         "--env-file",
-#         type=str,
-#         required=True,
-#         help="Path to the environment variables file.",
-#     )
+@app.command(group=g_build_load)
+def build_images(no_cache: bool=False):
+    """
+    Builds Docker images using the DockerManager.
 
-#     args = parser.parse_args()
+    Args:
+        no_cache: If True, builds the images without using cache. Defaults to False.
 
-#     if args.command is None:
-#         parser.print_help()
-#         sys.exit(1)
+    Returns:
+        None
+    """
+    docker_manager = DockerManager()
+    if docker_manager.client is not None:
+        print("Docker client initialized successfully.")
+    else:
+        print("Failed to initialize Docker client.")
+    
+    docker_manager.build_images(no_cache=no_cache)
 
-#     docker_manager = DockerManager()
-#     env_vars = utils.load_env_file(args.env_file) if "env_file" in args else {}
+@app.command(group=g_build_load)
+def load_data(env_file: str):
+    """
+    Loads data using the DockerManager.
 
-#     if args.command == "build-images":
-#         docker_manager.build_images(no_cache=args.no_cache)
-#     elif args.command == "load-data":
-#         docker_manager.load_data(env_vars=env_vars)
-#     elif args.command == "run-operational":
-#         docker_manager.operational_run(env_vars=env_vars, test=False)
-#     elif args.command == "run-operational-test":
-#         docker_manager.operational_run(
-#             env_vars=env_vars, num_days=args.num_days, test=True
-#         )
-#     elif args.command == "fetch-output":
-#         docker_manager.fetch_output(env_vars=env_vars)
+    Args:
+        env_file: The path to the environment file.
 
-# @app.command(group=g_build_load)
-# def build_images(no_cache: bool=False):
-#     docker_manager = DockerManager()
-#     docker_manager.build_images(no_cache=no_cache)
+    Returns:
+        None
+    """
+    docker_manager = DockerManager()
+    dict_env_vars = utils.load_env_file(env_file)
+    if docker_manager.client is not None:
+        print("Docker client initialized successfully.")
+    else:
+        print("Failed to initialize Docker client.")
+    docker_manager.load_data(env_vars=dict_env_vars)
 
+@app.command(group=g_operational)
+def fetch_op_results(env_file: str):
+    """
+    Fetches operational results using the DockerManager.
+
+    Args:
+        env_file: The path to the environment file.
+
+    Returns:
+        None
+    """
+    docker_manager = DockerManager()
+    dict_env_vars = utils.load_env_file(env_file)
+    if docker_manager.client is not None:
+        print("Docker client initialized successfully.")
+    else:
+        print("Failed to initialize Docker client.")
+    docker_manager.fetch_output(env_vars=dict_env_vars)
+
+def main():
+    app()
 
 if __name__ == "__main__":
     main()
