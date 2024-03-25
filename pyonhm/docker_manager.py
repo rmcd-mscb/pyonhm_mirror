@@ -4,11 +4,10 @@ from io import BytesIO
 import docker
 import sys
 import subprocess
-from . import utils
+from pyonhm import utils
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing_extensions import Annotated
-
 
 app = App(default_parameter=Parameter(negative=()))
 g_build_load = Group.create_ordered(name="Admin Commands", help="Build images and load supporting data into volume")
@@ -319,7 +318,7 @@ class DockerManager:
 
         Parameters
         ----------
-        env_vars : str
+        env_vars : dict
             A dictionary containing environment variables as key-value pairs. These variables are essential
             for configuring the operational tasks, including paths, configurations, and operational parameters.
         test : bool, optional
@@ -348,6 +347,26 @@ class DockerManager:
 
         self.op_containers(env_vars, restart_date)
 
+    def update_operational_restart(
+            self,
+            env_vars: dict,
+    ):
+        
+        print("Running restart update...")
+        restart_date = self.get_latest_restart_date(env_vars=env_vars)
+        print(f"The most recent restart date is {restart_date}")
+        utils.env_update_dates_for_restart_update(restart_date=restart_date, env_vars=env_vars)
+        print_keys = [
+            "START_DATE",
+            "END_DATE",
+            "RESTART_DATE",
+            "SAVE_RESTART_DATE",
+        ]
+        for key, value in env_vars.items():
+            if key in print_keys:
+                print(f"{key}: {value}")
+        self.update_restart_containers(env_vars=env_vars, restart_date=restart_date)
+
     def op_containers(self, env_vars, restart_date=None):
         """
         Run containers for data processing and analysis.
@@ -370,6 +389,24 @@ class DockerManager:
             image="nhmusgs/out2ncf",
             container_name="out2ncf",
             env_vars={"OUT_NCF_DIR": env_vars.get("OP_DIR")},
+        )
+
+        prms_restart_env = utils.get_prms_restart_env(env_vars=env_vars)
+        self.run_container(
+            image="nhmusgs/prms:5.2.1", container_name="prms", env_vars=prms_restart_env
+        )
+
+    def update_restart_containers(self, env_vars, restart_date=None):
+        """
+        Run containers for data processing and analysis.
+        """
+        self.run_container(
+            image="nhmusgs/gridmetetl:0.30",
+            container_name="gridmetetl",
+            env_vars=env_vars,
+        )
+        self.run_container(
+            image="nhmusgs/ncf2cbh", container_name="ncf2cbh", env_vars=env_vars
         )
 
         prms_restart_env = utils.get_prms_restart_env(env_vars=env_vars)
@@ -525,6 +562,16 @@ def build_images(no_cache: bool=False):
     docker_manager.build_images(no_cache=no_cache)
 
 @app.command(group=g_build_load)
+def update_operational_restart(env_file: str):
+    docker_manager=DockerManager()
+    dict_env_vars = utils.load_env_file(env_file)
+    if docker_manager.client is not None:
+        print("Docker client initialized successfully.")
+    else:
+        print("Failed to initialize Docker client.")
+    docker_manager.update_operational_restart(env_vars=dict_env_vars)
+
+@app.command(group=g_build_load)
 def load_data(env_file: str):
     """
     Loads data using the DockerManager.
@@ -563,7 +610,10 @@ def fetch_op_results(env_file: str):
     docker_manager.fetch_output(env_vars=dict_env_vars)
 
 def main():
-    app()
+    try:
+        app()
+    except Exception as e:
+        print(e)
 
 if __name__ == "__main__":
     main()

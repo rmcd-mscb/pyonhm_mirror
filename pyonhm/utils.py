@@ -40,6 +40,23 @@ def get_yesterday():
 def adjust_date(date, days):
     return (datetime.strptime(date, '%Y-%m-%d') + timedelta(days=days)).date()
 
+def env_update_dates_for_restart_update(restart_date, env_vars):
+    env_vars["RESTART_DATE"] = restart_date
+    yesterday = get_yesterday_mst().strftime('%Y-%m-%d')
+    # Directly setting START_DATE to restart_date + 1 day
+    start_date = adjust_date_str(restart_date, 1)
+    env_vars['START_DATE'] = start_date
+    env_vars['SAVE_RESTART_DATE'] = adjust_date(yesterday, -59).strftime('%Y-%m-%d')
+
+    # Setting END_DATE to SAVE_RESTART_DATE
+    env_vars['END_DATE'] = env_vars['SAVE_RESTART_DATE']
+
+    # setting for updating new restart time
+    env_vars['SAVE_RESTART_TIME'] = datetime.strptime(env_vars['END_DATE'], '%Y-%m-%d').strftime('%Y,%m,%d,00,00,00')
+
+    # Save restart date in env vars
+    env_vars['NEW_RESTART_DATE'] = restart_date
+
 def env_update_dates_for_testing(restart_date, env_vars, num_days):
     yesterday = get_yesterday_mst().strftime('%Y-%m-%d')
 
@@ -133,7 +150,11 @@ def get_prms_run_env(env_vars, restart_date):
     return prms_env
 
 def get_prms_restart_env(env_vars):
-
+    # Convert START_DATE string to datetime object
+    start_date = datetime.strptime(env_vars.get("START_DATE"), '%Y-%m-%d')
+    # Format START_DATE as needed
+    start_time = start_date.strftime('%Y,%m,%d,00,00,00')
+    env_vars["START_TIME"] = start_time
     project_root = env_vars.get("PROJECT_ROOT")
     op_dir = env_vars.get("OP_DIR")
     frcst_dir = env_vars.get("FRCST_DIR")

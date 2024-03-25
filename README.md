@@ -21,7 +21,7 @@ poetry install
 
 ## Command Line Interface
 
-```shell
+```text
 Usage: pyonhm COMMAND
 
 ╭─ Admin Commands ───────────────────────────────────────────╮
