@@ -10,10 +10,14 @@
 #           Andrew Halper
 #
 
-echo "Input Dir is $OP_NCF_IDIR"
-echo "Date tag is $END_DATE"
-echo "File prefix is $OP_NCF_PREFIX"
+echo "Input Dir is $NCF2CBH_IDIR"
+echo "Start date is $NCF2CBH_START_DATE"
+echo "File prefix is $NCF2CBH_PREFIX"
+
+# Combine START_DATE and OP_NCF_PREFIX with an underscore
+COMBINED_ARG="${NCF2CBH_START_DATE}_${NCF2CBH_PREFIX}"
+echo "Combined argument is $COMBINED_ARG"
 
 /opt/conda/bin/python \
     -u "$NHM_SOURCE_DIR/onhm-runners/ncf2cbh/ncf2cbh_gfv11b.py" \
-    "$OP_NCF_IDIR" "$END_DATE" "$OP_NCF_PREFIX"
+    "$NCF2CBH_IDIR" "$COMBINED_ARG"

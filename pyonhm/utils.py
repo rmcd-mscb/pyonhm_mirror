@@ -1,7 +1,11 @@
+import os
 import pprint
+import re
+from typing import Tuple
 import urllib3
 import xmltodict
 from datetime import datetime, timedelta
+from pathlib import Path
 from pprint import pprint
 import pytz
 
@@ -93,7 +97,7 @@ def env_update_dates(restart_date, env_vars):
 
     # Setting START_DATE if it's not set
     if 'START_DATE' not in env_vars or not env_vars['START_DATE']:
-        restart_date = env_vars.get('RESTART_DATE', yesterday)  # Use yesterday if RESTART_DATE is not set
+        restart_date = env_vars.get('RESTART_DATE', restart_date)  # Use yesterday if RESTART_DATE is not set
         env_vars['START_DATE'] = adjust_date(restart_date, 1).strftime('%Y-%m-%d')
 
     # Setting SAVE_RESTART_DATE if it's not set
@@ -116,6 +120,15 @@ def env_update_dates(restart_date, env_vars):
     # Save restart date in env vars
     env_vars['NEW_RESTART_DATE'] = restart_date
 
+def get_ncf2cbh_vars(env_vars: dict, mode: str):
+    if mode == "op":
+        vars = {
+            "NCF2CBH_IDIR": env_vars.get("OP_NCF_IDIR"),
+            "NCF2CBH_PREFIX": env_vars.get("OP_NCF_PREFIX"),
+            "NCF2CBH_START_DATE": env_vars.get("START_DATE")
+        }
+    
+    return vars
 def get_prms_run_env(env_vars, restart_date):
     # Convert START_DATE string to datetime object
     start_date = datetime.strptime(env_vars.get("START_DATE"), '%Y-%m-%d')
@@ -149,6 +162,18 @@ def get_prms_run_env(env_vars, restart_date):
     pprint(prms_env)
     return prms_env
 
+def get_cfsv2_env(env_vars: dict, method: str):
+    if method == "ensemble":
+        mode = 2
+    elif method == "median":
+        mode = 1
+    return {
+        "TARGET_FILE": env_vars.get("GM_INPUT_FILE"),
+        "OUTPATH": env_vars.get("CFSV2_NCF_IDIR"),
+        "WEIGHTS_FILE": env_vars.get("GM_WEIGHTS_FILE"),
+        "METHOD": mode,
+    }
+    
 def get_prms_restart_env(env_vars):
     # Convert START_DATE string to datetime object
     start_date = datetime.strptime(env_vars.get("START_DATE"), '%Y-%m-%d')
@@ -210,8 +235,7 @@ def gridmet_updated() -> bool:
 
     for data in data_packets:
         masterURL = f"{serverURL}/{data}/{urlsuffix}"
-        xml_data = _getxml(masterURL)
-        if xml_data:
+        if xml_data := _getxml(masterURL):
             datadef = xml_data['gridDataset']['TimeSpan']['end']
             gm_date = datetime.strptime(datadef[:10], '%Y-%m-%d').date()
             if gm_date != yesterday:
@@ -223,3 +247,19 @@ def gridmet_updated() -> bool:
         else:
             print(f"Failed to fetch or parse data for {data}")
             return False
+
+def is_next_day_present(date_folders: list[str], user_date: str) -> Tuple[bool, str]:
+    # Parse the user-specified date
+    user_date_dt = datetime.strptime(user_date, "%Y-%m-%d")
+    
+    # Calculate the next day
+    next_day_dt = user_date_dt + timedelta(days=1)
+    
+    # Convert the next day back to string in YYYY-mm-dd format
+    next_day_str = next_day_dt.strftime("%Y-%m-%d")
+    
+    # Check if the next day is in the list of date_folders
+    is_present = next_day_str in date_folders
+    
+    # Return state and the date string if present, otherwise None
+    return (is_present, next_day_str if is_present else None)

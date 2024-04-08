@@ -41,7 +41,7 @@ LABEL maintainer="ashalper@usgs.gov"
 # https://serverfault.com/questions/84521/automate-dpkg-reconfigure-tzdata
 RUN ln -fs /usr/share/zoneinfo/UTC /etc/localtime
 
-RUN apt-get update && \
+RUN apt-get update --fix-missing && \
     apt-get -q -y install \
 	    apt-utils \
 	    ca-certificates \
@@ -99,7 +99,7 @@ RUN mamba update -n base mamba -y && \
     mamba install -n base -c conda-forge -y \
         python \
         pip \
-        gdptools=0.2.6 \
+        gdptools=0.2.7 \
         dask \
         bottleneck \
         geopandas \
@@ -111,7 +111,8 @@ RUN mamba update -n base mamba -y && \
         xmltodict \
         pint-xarray && \
     mamba clean -a && \
-    /bin/bash -c "source activate base && pip --trusted-host pypi.org --trusted-host files.pythonhosted.org install -vvv git+https://code.chs.usgs.gov/wma/nhm/gridmetetl.git@check2"
+    /bin/bash -c "source activate base"
+    # && pip --trusted-host pypi.org --trusted-host files.pythonhosted.org install -vvv git+https://code.chs.usgs.gov/wma/nhm/gridmetetl.git@check2
 
 # ## Source Code Location
 #
@@ -133,7 +134,8 @@ RUN git -c advice.detachedHead=false clone \
     rm -rf .git && \
     rm .gitignore README.md .project .pydevproject
 
-RUN pip --trusted-host pypi.org --trusted-host files.pythonhosted.org install -vvv git+https://code.chs.usgs.gov/wma/nhm/gridmetetl.git@check2
+# RUN pip --trusted-host pypi.org --trusted-host files.pythonhosted.org install -vvv git+https://code.chs.usgs.gov/wma/nhm/gridmetetl.git@check2
+RUN pip --trusted-host pypi.org --trusted-host files.pythonhosted.org install -vvv git+https://github.com/rmcd-mscb/gridmet-etl.git
 
 # ## gridmetetl Output Directory
 #
@@ -146,8 +148,10 @@ RUN mkdir -p /nhm/gridmetetl/Output
 # in the base image.
 ENV USER=nhm
 RUN useradd -ms /bin/bash $USER
-RUN chown -R $USER /nhm
-RUN chgrp -R $USER /nhm
+# RUN chown -R $USER /nhm
+# RUN chgrp -R $USER /nhm
+RUN chown -R nhm:nhm /nhm
+RUN chmod -R 755 /nhm
 ENV HOMEDIR=/home/$USER
 
 # ## Shared Volume

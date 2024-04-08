@@ -5,6 +5,7 @@ import docker
 import sys
 import subprocess
 from pyonhm import utils
+from docker.errors import ContainerError, ImageNotFound, APIError
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing_extensions import Annotated
@@ -32,7 +33,7 @@ class DockerManager:
             print(f"An unexpected error occurred: {e}")
             self.client = None
 
-    def build_image(self, context_path, tag, no_cache=False):
+    def build_image(self, context_path, tag, no_cache=False) -> bool:
         """
         Build docker image from context_path and tag. This is useful for debugging
 
@@ -54,8 +55,10 @@ class DockerManager:
             for line in response[1]:
                 if "stream" in line:
                     print(line["stream"], end="", flush=True)
+            return True
         except Exception as e:
             print(f"Failed to build Docker image: {e}")
+            return False
 
     def container_exists_and_running(self, container_name):
         """
@@ -168,7 +171,7 @@ class DockerManager:
             prms_download_commands = f"""
                 wget --waitretry=3 --retry-connrefused {env_vars['PRMS_SOURCE']} ;
                 unzip {env_vars['PRMS_DATA_PKG']} ;
-                chown -R nhm /nhm/NHM_PRMS_CONUS_GF_1_1 ;
+                chown -R nhm:nhm /nhm/NHM_PRMS_CONUS_GF_1_1 ;
                 chmod -R 766 /nhm/NHM_PRMS_CONUS_GF_1_1
             """
             self.download_data(
@@ -189,7 +192,7 @@ class DockerManager:
             prms_download_commands = f"""
                 wget --waitretry=3 --retry-connrefused {env_vars['PRMS_TEST_SOURCE']} ;
                 unzip {env_vars['PRMS_TEST_DATA_PKG']} ;
-                chown -R nhm /nhm/NHM_PRMS_UC_GF_1_1 ;
+                chown -R nhm:nhm /nhm/NHM_PRMS_UC_GF_1_1 ;
                 chmod -R 766 /nhm/NHM_PRMS_UC_GF_1_1
             """
             self.download_data(
@@ -200,7 +203,7 @@ class DockerManager:
                 download_commands=prms_download_commands,
             )
 
-    def get_latest_restart_date(self, env_vars):
+    def get_latest_restart_date(self, env_vars: dict, mode: str):
         """
         Finds and returns the date of the latest restart file in a specified directory within a Docker container.
 
@@ -212,6 +215,7 @@ class DockerManager:
         - self: The instance of the class containing this method.
         - env_vars (dict): A dictionary of environment variables where "PROJECT_ROOT" specifies the root directory
         of the project within the container's file system.
+        - mode (str): Either "op" or "forecast".
 
         Returns:
         - str: The date of the latest restart file, extracted from its filename.
@@ -220,23 +224,66 @@ class DockerManager:
         This function requires that the Docker client is initialized in the class and that the necessary volume
         bindings are set up in `self.volume_binding` to allow access to the project's files from within the container.
         """
+        if mode not in ["op", "forecast"]:
+           raise ValueError(f"Invalid mode '{mode}'. Mode must be 'op' or 'forecast'.")
         command = "bash -c 'ls -1 *.restart | sort | tail -1 | cut -f1 -d .'"
         project_root = env_vars.get("PROJECT_ROOT")
-        container = self.client.containers.run(
-            image="nhmusgs/base",
-            command=command,
-            volumes=self.volume_binding,
-            working_dir=f"{project_root}/daily/restart",
-            environment={"TERM": "dumb"},
-            detach=True,
-            tty=True,
-        )
+        if mode == "op":
+            container = self.client.containers.run(
+                image="nhmusgs/base",
+                command=command,
+                volumes=self.volume_binding,
+                working_dir=f"{project_root}/daily/restart",
+                environment={"TERM": "dumb"},
+                detach=True,
+                tty=True,
+            )
+        elif mode == "forecast":
+             container = self.client.containers.run(
+                image="nhmusgs/base",
+                command=command,
+                volumes=self.volume_binding,
+                working_dir=f"{project_root}/forecast/restart",
+                environment={"TERM": "dumb"},
+                detach=True,
+                tty=True,
+            )
 
         restart_date = container.logs().decode("utf-8").strip()
         container.remove()  # Clean up the container
         return restart_date
 
     def run_container(self, image, container_name, env_vars):
+        exists, _running = self.container_exists_and_running(container_name)
+        if exists:
+            # Handle the exited container. You can either restart it or remove and recreate it.
+            self.manage_container(container_name=container_name, action="stop_remove")
+        try:
+            print(f"Running container '{container_name}' from image '{image}'...")
+            container = self.client.containers.run(
+                image=image,
+                name=container_name,
+                environment=env_vars,
+                volumes=self.volume_binding,
+                detach=True,
+            )
+            for log in container.logs(stream=True):
+                print(log.decode("utf-8").strip())
+            container.reload()  # Reload the container's state
+            if container.status == "exited":
+                exit_code = container.attrs['State']['ExitCode']
+                if exit_code != 0:
+                    print(f"Container '{container_name}' exited with error code {exit_code}.")
+                    return False
+            return True
+        except (ContainerError, ImageNotFound, APIError) as e:
+            print(f"An error occurred: {e}")
+            return False
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+            return False
+
+    def run_container_old(self, image, container_name, env_vars):
         exists, _running = self.container_exists_and_running(container_name)
         if exists:
             # Handle the exited container. You can either restart it or remove and recreate it.
@@ -252,7 +299,7 @@ class DockerManager:
         for log in container.logs(stream=True):
             print(log.decode("utf-8").strip())
 
-    def build_images(self, no_cache:bool = False):
+    def build_images(self, no_cache: bool = False):
         """
         Build Docker images for various components of the application.
 
@@ -265,17 +312,23 @@ class DockerManager:
         ----------
         no_cache : bool, optional
             A boolean flag indicating whether the Docker build process should ignore the cache.
-            When set to True, the build process does not use the cache, leading to a fresh
-            download of all layers in the Dockerfile. This can be useful for ensuring that the
-            latest versions of dependencies are included in the built image. The default is False,
-            which allows the build process to use the cache for efficiency.
         """
         print("Building Docker images...")
-        self.build_image("./pyonhm/base", "nhmusgs/base", no_cache=no_cache)
-        self.build_image("./pyonhm/gridmetetl", "nhmusgs/gridmetetl:0.30", no_cache=no_cache)
-        self.build_image("./pyonhm/ncf2cbh", "nhmusgs/ncf2cbh", no_cache=no_cache)
-        self.build_image("./pyonhm/prms", "nhmusgs/prms:5.2.1", no_cache=no_cache)
-        self.build_image("./pyonhm/out2ncf", "nhmusgs/out2ncf", no_cache=no_cache)
+        components = [
+            ("./pyonhm/base", "nhmusgs/base"),
+            ("./pyonhm/gridmetetl", "nhmusgs/gridmetetl:0.30"),
+            ("./pyonhm/ncf2cbh", "nhmusgs/ncf2cbh"),
+            ("./pyonhm/prms", "nhmusgs/prms:5.2.1"),
+            ("./pyonhm/out2ncf", "nhmusgs/out2ncf"),
+            ("./pyonhm/cfsv2etl", "nhmusgs/cfsv2etl")
+        ]
+
+        for context_path, tag in components:
+            success = self.build_image(context_path, tag, no_cache=no_cache)
+            if not success:
+                print(f"Stopping build process due to failure in building {tag}.")
+                return  # Stop execution if a build fails
+
 
     def load_data(self, env_vars:dict):
         """
@@ -301,7 +354,47 @@ class DockerManager:
         for key, value in env_vars.items():
             if key in print_keys:
                 print(f"{key}: {value}")
+    def list_date_folders(self, path: Path):
+        # Bash command to list directories matching the date pattern
+        command = f"bash -c 'find {path} -maxdepth 1 -type d | grep -E \"/[0-9]{{4}}-[0-9]{{2}}-[0-9]{{2}}$\"'"
+        container = self.client.containers.run(
+            image="nhmusgs/base",
+            command=command,
+            volumes=self.volume_binding,
+            # environment={"TERM": "dumb"},
+            detach=True,
+            tty=True,
+        )
+        output = container.logs().decode("utf-8").strip()
+        container.remove()  # Clean up the container
 
+        return [line.split('/')[-1] for line in output.split('\n')]
+    def forecast_run(
+            self,
+            env_vars: dict,
+            method: str = "median"
+    ):
+        if method not in ["median", "ensemble"]:
+            raise ValueError(f"Invalid method '{method}'. Mode must be 'median' or 'ensemble'.")
+        median_path = Path(env_vars.get("CFSV2_NCF_IDIR")) / "ensemble_median"
+        ensemble_path = Path(env_vars.get("CFSV2_NCF_IDIR")) / "ensembles/"
+        print("Running forecast tasks...")
+        forecast_restart_date = self.get_latest_restart_date(env_vars=env_vars, mode="forecast")
+        print(f"Forecast restart date is {forecast_restart_date}")
+        if method == "median":
+            forecast_input_dates = self.list_date_folders(median_path)
+        elif method == "ensemble":
+            forecast_input_dates = self.list_date_folders(ensemble_path)
+        
+        state, forecast_run_date = utils.is_next_day_present(forecast_input_dates, forecast_restart_date)
+        print(f"{method} forecast ready: {state}, forecast start date: {forecast_run_date}")
+    
+        success = self.run_container(
+            image="nhmusgs/ncf2cbh", container_name="ncf2cbh", env_vars=env_vars
+        )
+        if not success:
+            print("Failed to run container 'ncf2cbh'. Exiting...")
+            sys.exit(1)
     def operational_run(
         self,
         env_vars: dict,
@@ -330,7 +423,7 @@ class DockerManager:
             applicable if `test` is True.
         """
         print("Running operational tasks...")
-        restart_date = self.get_latest_restart_date(env_vars=env_vars)
+        restart_date = self.get_latest_restart_date(env_vars=env_vars, mode="op")
         print(restart_date)
 
         if test:
@@ -351,9 +444,17 @@ class DockerManager:
             self,
             env_vars: dict,
     ):
-        
+        """
+        Updates the operational restart for the Docker manager.
+
+        Args:
+            env_vars (dict): A dictionary containing environment variables.
+
+        Returns:
+            None
+        """
         print("Running restart update...")
-        restart_date = self.get_latest_restart_date(env_vars=env_vars)
+        restart_date = self.get_latest_restart_date(env_vars=env_vars, mode="op")
         print(f"The most recent restart date is {restart_date}")
         utils.env_update_dates_for_restart_update(restart_date=restart_date, env_vars=env_vars)
         print_keys = [
@@ -367,7 +468,55 @@ class DockerManager:
                 print(f"{key}: {value}")
         self.update_restart_containers(env_vars=env_vars, restart_date=restart_date)
 
+    import sys
+
     def op_containers(self, env_vars, restart_date=None):
+        """
+        Run containers for data processing and analysis. Exits if a container fails to run.
+        """
+        success = self.run_container(
+            image="nhmusgs/gridmetetl:0.30",
+            container_name="gridmetetl",
+            env_vars=env_vars,
+        )
+        if not success:
+            print("Failed to run container 'gridmetetl'. Exiting...")
+            sys.exit(1)  # Exit the program with an error code
+
+        ncf2cbh_vars = utils.get_ncf2cbh_vars(env_vars=env_vars, mode="op")
+        success = self.run_container(
+            image="nhmusgs/ncf2cbh", container_name="ncf2cbh", env_vars=ncf2cbh_vars
+        )
+        if not success:
+            print("Failed to run container 'ncf2cbh'. Exiting...")
+            sys.exit(1)
+
+        prms_env = utils.get_prms_run_env(env_vars=env_vars, restart_date=restart_date)
+        success = self.run_container(
+            image="nhmusgs/prms:5.2.1", container_name="prms", env_vars=prms_env
+        )
+        if not success:
+            print("Failed to run container 'prms'. Exiting...")
+            sys.exit(1)
+
+        success = self.run_container(
+            image="nhmusgs/out2ncf",
+            container_name="out2ncf",
+            env_vars={"OUT_NCF_DIR": env_vars.get("OP_DIR")},
+        )
+        if not success:
+            print("Failed to run container 'out2ncf'. Exiting...")
+            sys.exit(1)
+
+        prms_restart_env = utils.get_prms_restart_env(env_vars=env_vars)
+        success = self.run_container(
+            image="nhmusgs/prms:5.2.1", container_name="prms", env_vars=prms_restart_env
+        )
+        if not success:
+            print("Failed to run container 'prms' with restart environment. Exiting...")
+            sys.exit(1)
+
+    def op_containers_old(self, env_vars, restart_date=None):
         """
         Run containers for data processing and analysis.
         """
@@ -397,8 +546,10 @@ class DockerManager:
         )
 
     def update_restart_containers(self, env_vars, restart_date=None):
-        """
-        Run containers for data processing and analysis.
+        """Update restart file to current day.
+
+        Convenience method that runs containers to forward the most recent restart file current with what would be required
+        to run the operational model today.
         """
         self.run_container(
             image="nhmusgs/gridmetetl:0.30",
@@ -475,7 +626,13 @@ class DockerManager:
                 print("Container 'volume_mounter' removed successfully.")
             except docker.errors.NotFound:
                 print("Container already removed or not found.")
-
+    def update_cfsv2(self, env_vars: dict, method: str):
+        cfsv2_env = utils.get_cfsv2_env(env_vars=env_vars, method=method)
+        self.run_container(
+            image="nhmusgs/cfsv2etl",
+            container_name="cfsv2_env",
+            env_vars=cfsv2_env,
+        )
 @app.command(group=g_operational)
 def run_operational(env_file: str, num_days: int=4, test:bool=False):
     """
@@ -499,14 +656,13 @@ def run_operational(env_file: str, num_days: int=4, test:bool=False):
     docker_manager.operational_run(env_vars=dict_env_vars, test=test, num_days=num_days)
 
 @app.command(group=g_sub_seasonal)
-def run_sub_seasonal(env_file: str, num_days: int=4, test:bool=False):
+def run_sub_seasonal(env_file: str, method: str):
     """
     Runs the sub-seasonal operational simulation using the DockerManager.
 
     Args:
-        env_file: The path to the environment file.
-        num_days: The number of days to run the simulation for. Defaults to 4.
-        test: If True, runs the simulation in test mode. Defaults to False.
+        env_file (str): The path to the environment file.
+        method (str): One of ["median"]["ensemble"]  
 
     Returns:
         None
@@ -517,8 +673,32 @@ def run_sub_seasonal(env_file: str, num_days: int=4, test:bool=False):
         print("Docker client initialized successfully.")
     else:
         print("Failed to initialize Docker client.")
-    
+    docker_manager.forecast_run(env_vars=dict_env_vars, method=method)
     print("TODO")
+
+@app.command(group=g_sub_seasonal)
+def run_update_cfsv2_data(env_file: str, method: str):
+    """
+    Runs the update of CFSv2 data using the specified method , either 'ensemble' or 'median'.
+
+    Args:
+        env_file (str): Path to the environment file.
+        method (str): The method to use for updating data, either 'ensemble' or 'median'.
+
+    Returns:
+        None
+    """
+    docker_manager = DockerManager()
+    dict_env_vars = utils.load_env_file(env_file)
+    if docker_manager.client is not None:
+        print("Docker client initialized successfully.")
+    else:
+        print("Failed to initialize Docker client.")
+    if method not in ["ensemble", "median"]:
+        print(f"Error: '{method}' is not a valid method. Please use 'ensemble' or 'median'.")
+        sys.exit(1)  # Exit with error code 1 to indicate failure
+    
+    docker_manager.update_cfsv2(env_vars=dict_env_vars, method=method)
 
 @app.command(group=g_seasonal)
 def run_seasonal(env_file: str, num_days: int=4, test:bool=False):
@@ -539,6 +719,7 @@ def run_seasonal(env_file: str, num_days: int=4, test:bool=False):
         print("Docker client initialized successfully.")
     else:
         print("Failed to initialize Docker client.")
+    
     
     print("TODO")
 
@@ -563,6 +744,15 @@ def build_images(no_cache: bool=False):
 
 @app.command(group=g_build_load)
 def update_operational_restart(env_file: str):
+    """
+    Updates the operational restart using the provided environment file.
+
+    Args:
+        env_file (str): Path to the environment file.
+
+    Returns:
+        None
+    """
     docker_manager=DockerManager()
     dict_env_vars = utils.load_env_file(env_file)
     if docker_manager.client is not None:

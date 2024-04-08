@@ -1,0 +1,27 @@
+#! /bin/bash
+#
+# U.S. Geological Survey
+#
+# File - ofp
+#
+# Purpose - Docker entry-point for NHM gridmetetl container.
+#
+# Authors - Ivan Suftin, Richard McDonald, Steven Markstrom,
+#           Andrew Halper
+#
+
+echo "Parameters passed to cfsv2etl"
+echo "TARGET FILE is $TARGET_FILE"
+echo "OUTPATH is $OUTPATH"
+echo "WEIGHTS FILE is $WEIGHTS_FILE"
+echo "Method is $METHOD"
+
+gridmetetl cfsv2-etl \
+     --file-prefix cfsv2_ \
+     --target-file "$TARGET_FILE" \
+     --output-path "$OUTPATH" \
+     --weight-file "$WEIGHTS_FILE" \
+     --fid nhm_id \
+     --method "$METHOD" \
+     --fill-missing \
+     --no-partial
