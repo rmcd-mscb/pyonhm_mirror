@@ -5,6 +5,9 @@ FROM nhmusgs/base
 
 LABEL maintainer="ashalper@usgs.gov"
 
+# Copy python script into image
+COPY --chown=nhm ncf2cbh_gfv11_embedded.py /opt/conda/bin
+RUN chmod 744 /opt/conda/bin/ncf2cbh_gfv11_embedded.py
 # ## ncf2cbh Installation Location
 #
 # The ncf2cbh program installs in `/usr/local/bin`.

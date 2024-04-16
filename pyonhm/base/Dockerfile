@@ -100,6 +100,7 @@ RUN mamba update -n base mamba -y && \
         python \
         pip \
         gdptools=0.2.7 \
+        cyclopts \
         dask \
         bottleneck \
         geopandas \

@@ -21,6 +21,7 @@ gridmetetl cfsv2-etl \
      --target-file "$TARGET_FILE" \
      --output-path "$OUTPATH" \
      --weight-file "$WEIGHTS_FILE" \
+     --model-param-file "$MODEL_PARAM_FILE" \
      --fid nhm_id \
      --method "$METHOD" \
      --fill-missing \

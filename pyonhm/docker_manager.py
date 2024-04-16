@@ -344,17 +344,39 @@ class DockerManager:
         Print selected environment variables.
         """
         print_keys = [
+            "RESTART_DATE",
             "START_DATE",
             "END_DATE",
-            "RESTART_DATE",
             "SAVE_RESTART_DATE",
+        ]
+        for key, value in env_vars.items():
+            if key in print_keys:
+                print(f"{key}: {value}")
+
+    def print_forecast_env_vars(self, env_vars: dict):
+        """
+        Print selected environment variables.
+        """
+        print_keys = [
+            "FRCST_START_DATE",
             "FRCST_END_DATE",
-            "F_END_TIME",
+            "FRCST_START_TIME",
+            "FRCST_END_TIME"
         ]
         for key, value in env_vars.items():
             if key in print_keys:
                 print(f"{key}: {value}")
     def list_date_folders(self, path: Path):
+        """
+        Generates a list of date folders from the specified path by listing directories matching the date pattern.
+
+        Args:
+            path (Path): The path to search for date folders.
+
+        Returns:
+            list: A list of date folders extracted from the specified path.
+        """
+
         # Bash command to list directories matching the date pattern
         command = f"bash -c 'find {path} -maxdepth 1 -type d | grep -E \"/[0-9]{{4}}-[0-9]{{2}}-[0-9]{{2}}$\"'"
         container = self.client.containers.run(
@@ -368,33 +390,54 @@ class DockerManager:
         output = container.logs().decode("utf-8").strip()
         container.remove()  # Clean up the container
 
-        return [line.split('/')[-1] for line in output.split('\n')]
+        # return [line.split('/')[-1] for line in output.split('\n')]
+        return [line.strip().split('/')[-1] for line in output.split('\n')]
+
     def forecast_run(
             self,
             env_vars: dict,
             method: str = "median"
     ):
+        print("Running tasks for {method} forecast...")
         if method not in ["median", "ensemble"]:
             raise ValueError(f"Invalid method '{method}'. Mode must be 'median' or 'ensemble'.")
         median_path = Path(env_vars.get("CFSV2_NCF_IDIR")) / "ensemble_median"
         ensemble_path = Path(env_vars.get("CFSV2_NCF_IDIR")) / "ensembles/"
         print("Running forecast tasks...")
+        # Get the most recent operational run restart date.  During an operational run, a restart file representing
+        # The last day of operational simulation is placed in forecast/restart/ directory.
         forecast_restart_date = self.get_latest_restart_date(env_vars=env_vars, mode="forecast")
         print(f"Forecast restart date is {forecast_restart_date}")
+        utils.env_update_forecast_dates(restart_date=forecast_restart_date, env_vars=env_vars)
+        self.print_forecast_env_vars(env_vars)
+
+        # Get a list of dates representing the available processed climate drivers
         if method == "median":
             forecast_input_dates = self.list_date_folders(median_path)
         elif method == "ensemble":
             forecast_input_dates = self.list_date_folders(ensemble_path)
         
+        # Given the list of available forecast climate data is there data that represents the calculated 
+        # forecast_start_date calculated above?
         state, forecast_run_date = utils.is_next_day_present(forecast_input_dates, forecast_restart_date)
         print(f"{method} forecast ready: {state}, forecast start date: {forecast_run_date}")
-    
-        success = self.run_container(
-            image="nhmusgs/ncf2cbh", container_name="ncf2cbh", env_vars=env_vars
-        )
-        if not success:
-            print("Failed to run container 'ncf2cbh'. Exiting...")
-            sys.exit(1)
+
+        if method == 'median':
+            med_vars = utils.get_ncf2cbh_opvars(env_vars=env_vars, mode=method, ensemble=0)
+            success = self.run_container(
+                image="nhmusgs/ncf2cbh", container_name="ncf2cbh", env_vars=med_vars
+            )
+            if not success:
+                print("Failed to run container 'ncf2cbh'. for median ensemble Exiting...")
+                sys.exit(1)
+
+            prms_env = utils.get_prms_run_env(env_vars=env_vars, restart_date=restart_date)
+            success = self.run_container(
+                image="nhmusgs/prms:5.2.1", container_name="prms", env_vars=prms_env
+            )
+            if not success:
+                print("Failed to run container 'prms'. Exiting...")
+                sys.exit(1)
     def operational_run(
         self,
         env_vars: dict,
@@ -431,13 +474,12 @@ class DockerManager:
                 restart_date=restart_date, env_vars=env_vars, num_days=num_days
             )
         else:
-            utils.env_update_dates(restart_date=restart_date, env_vars=env_vars)
+            status_list, date_list = utils.gridmet_updated()
+            gm_status, end_date_str = utils.check_consistency(status_list, date_list)
+            utils.env_update_dates(restart_date=restart_date, end_date=end_date_str, env_vars=env_vars)
+            print(f"Gridmet updated relative to yesterday: {gm_status}")
 
         self.print_env_vars(env_vars)
-
-        gm_update = utils.gridmet_updated()
-        print(f"Gridmet updated: {gm_update}")
-
         self.op_containers(env_vars, restart_date)
 
     def update_operational_restart(
@@ -483,7 +525,7 @@ class DockerManager:
             print("Failed to run container 'gridmetetl'. Exiting...")
             sys.exit(1)  # Exit the program with an error code
 
-        ncf2cbh_vars = utils.get_ncf2cbh_vars(env_vars=env_vars, mode="op")
+        ncf2cbh_vars = utils.get_ncf2cbh_opvars(env_vars=env_vars, mode="op")
         success = self.run_container(
             image="nhmusgs/ncf2cbh", container_name="ncf2cbh", env_vars=ncf2cbh_vars
         )
@@ -515,35 +557,6 @@ class DockerManager:
         if not success:
             print("Failed to run container 'prms' with restart environment. Exiting...")
             sys.exit(1)
-
-    def op_containers_old(self, env_vars, restart_date=None):
-        """
-        Run containers for data processing and analysis.
-        """
-        self.run_container(
-            image="nhmusgs/gridmetetl:0.30",
-            container_name="gridmetetl",
-            env_vars=env_vars,
-        )
-        self.run_container(
-            image="nhmusgs/ncf2cbh", container_name="ncf2cbh", env_vars=env_vars
-        )
-
-        prms_env = utils.get_prms_run_env(env_vars=env_vars, restart_date=restart_date)
-        self.run_container(
-            image="nhmusgs/prms:5.2.1", container_name="prms", env_vars=prms_env
-        )
-
-        self.run_container(
-            image="nhmusgs/out2ncf",
-            container_name="out2ncf",
-            env_vars={"OUT_NCF_DIR": env_vars.get("OP_DIR")},
-        )
-
-        prms_restart_env = utils.get_prms_restart_env(env_vars=env_vars)
-        self.run_container(
-            image="nhmusgs/prms:5.2.1", container_name="prms", env_vars=prms_restart_env
-        )
 
     def update_restart_containers(self, env_vars, restart_date=None):
         """Update restart file to current day.
