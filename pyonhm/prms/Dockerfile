@@ -28,6 +28,10 @@ RUN cd $NHM_SOURCE_DIR && unzip $VERSION_TAG_PRMS.zip && rm $VERSION_TAG_PRMS.zi
 COPY --chown=nhm prms /usr/local/bin
 RUN chmod 744 /usr/local/bin/prms
 
+# Copy the Python entrypoint script
+COPY --chown=nhm run_prms.py /usr/local/bin/run_prms.py
+RUN chmod +x /usr/local/bin/run_prms.py
+
 # ## PRMS User Account
 #
 # The PRMS user account is defined in the [base image
@@ -35,4 +39,7 @@ RUN chmod 744 /usr/local/bin/prms
 USER $USER
 WORKDIR /home/$USER
 
-ENTRYPOINT ["/bin/bash", "-c", "/usr/local/bin/prms"]
+# Set the entrypoint to use Python from the Conda environment
+ENTRYPOINT ["/opt/conda/bin/python", "/usr/local/bin/run_prms.py"]
+
+# ENTRYPOINT ["/bin/bash", "-c", "/usr/local/bin/prms"]

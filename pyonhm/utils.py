@@ -167,6 +167,31 @@ def get_ncf2cbh_opvars(env_vars: dict, mode: str, ensemble: int = 0):
         }
     return tvars
 
+def get_forecast_median_prms_run_env(env_vars, restart_date):
+   
+    start_date_string = env_vars.get("FRCST_START_DATE")
+    end_date_string = env_vars.get("FRCST_END_DATE")
+    project_root = env_vars.get("PROJECT_ROOT")
+    op_dir = env_vars.get("OP_DIR")
+    frcst_dir = env_vars.get("FRCST_DIR")
+
+    prms_env = {
+        "OP_DIR": op_dir,
+        "FRCST_DIR": frcst_dir,
+        "PRMS_START_TIME": env_vars.get("FRCST_START_TIME"),
+        "PRMS_END_TIME": env_vars.get("FRCST_END_TIME"),
+        "PRMS_INIT_VARS_FROM_FILE": "1",
+        "PRMS_RESTART_DATE": restart_date,
+        "PRMS_VAR_INIT_FILE": f"{project_root}/forecast/restart/{restart_date}.restart",
+        "PRMS_SAVE_VARS_TO_FILE": "0",
+        "PRMS_CONTROL_FILE": env_vars.get("OP_PRMS_CONTROL_FILE"),
+        "PRMS_RUN_TYPE": 1,
+        "PRMS_INPUT_DIR": f"{project_root}/forecast/input/emsemble_median/{start_date_string}",
+        "PRMS_OUTPUT_DIR": f"{project_root}/forecast/output/emsemble_median/{start_date_string}"
+    }
+    print("PRMS RUN ENV: \n")
+    pprint(prms_env)
+    return prms_env
 
 def get_prms_run_env(env_vars, restart_date):
     # Convert START_DATE string to datetime object

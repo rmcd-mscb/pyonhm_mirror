@@ -431,7 +431,7 @@ class DockerManager:
                 print("Failed to run container 'ncf2cbh'. for median ensemble Exiting...")
                 sys.exit(1)
 
-            prms_env = utils.get_prms_run_env(env_vars=env_vars, restart_date=restart_date)
+            prms_env = utils.get_forecast_median_prms_run_env(env_vars=env_vars, restart_date=forecast_restart_date)
             success = self.run_container(
                 image="nhmusgs/prms:5.2.1", container_name="prms", env_vars=prms_env
             )
