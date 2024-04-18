@@ -10,11 +10,11 @@
 #           Andrew Halper
 #
 
-echo "Input Dir is $NCF2CBH_IDIR"
+echo "Input path is $NCF2CBH_IDIR"
 echo "Start date is $NCF2CBH_START_DATE"
 echo "File prefix is $NCF2CBH_PREFIX"
 echo "File ensemble number is $NCF2CBH_ENS_NUM"
-echo "nhm_id dir is $NCF2CBH_NHMID_DIR"
+echo "root path is $NCF2CBH_ROOT_DIR"
 echo "Mode is $NCF2CBH_MODE"
 
 # Combine START_DATE and OP_NCF_PREFIX with an underscore
@@ -23,7 +23,8 @@ echo "Combined argument is $COMBINED_ARG"
 
 /opt/conda/bin/python \
     -u "/opt/conda/bin/ncf2cbh_gfv11_embedded.py" \
-    "--wdir" "$NCF2CBH_IDIR" \
+    "--input-path" "$NCF2CBH_IDIR" \
     "--prefix" "$COMBINED_ARG" \
     "--mode" "$NCF2CBH_MODE" \
-    "--nhmid-dir" "$NCF2CBH_NHMID_DIR"
+    "--root-path" "$NCF2CBH_ROOT_DIR" \
+    "--ensemble" "$NCF2CBH_ENS_NUM"

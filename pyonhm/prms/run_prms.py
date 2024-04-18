@@ -4,6 +4,8 @@ import os
 import sys
 import subprocess
 
+from pathlib import Path
+
 def check_env_variable(var_name):
     """Check if an environment variable is set and print its status."""
     value = os.getenv(var_name)
@@ -23,6 +25,31 @@ def change_directory(target_dir):
         print(f"Failed to change directory to {target_dir}: {e}")
         sys.exit(1)
 
+def ensure_directory(tpath: str) -> Path:
+    """
+    Ensure that a directory exists at the given path.
+
+    Args:
+        tpath: The path to the directory.
+
+    Returns:
+        str: The Path object of the directory.
+
+    Raises:
+        PermissionError: If permission is denied to create the directory.
+    """
+    try:
+        path = Path(tpath)  # Ensure `path` is a Path object
+        if not path.exists():
+            path.mkdir(parents=True, exist_ok=True)
+            print(f"Creating new path: {path}", flush=True)
+        print(f"{path} already exists", flush=True)
+        return tpath
+    except PermissionError as e:
+        print(
+            f"Error {e}, Permission denied: Unable to create directory at {path}",
+            flush=True,
+        )
 def main():
     op_dir = check_env_variable("OP_DIR")
     frcst_dir = check_env_variable("FRCST_DIR")
@@ -46,6 +73,8 @@ def main():
         ]
     elif prms_run_type == '1':
         change_directory(frcst_dir)
+        # Create prms output path if it doesn't exist 
+        t_path = ensure_directory(f"{os.getenv('PRMS_OUTPUT_DIR')}/")
         command = [
             os.path.join(nhm_source_dir, "bin", "prms"),
             "-set", "start_time", os.getenv("PRMS_START_TIME"),
@@ -53,12 +82,12 @@ def main():
             "-set", "init_vars_from_file", os.getenv("PRMS_INIT_VARS_FROM_FILE"),
             "-set", "var_init_file", os.getenv("PRMS_VAR_INIT_FILE"),
             "-set", "save_vars_to_file", os.getenv("PRMS_SAVE_VARS_TO_FILE"),
-            "-set", "humidity_day", f"{os.getenv('PRMS_INPUT_DIR')}/humidity.cbh",
-            "-set", "prcp_day", f"{os.getenv('PRMS_INPUT_DIR')}/prcp.cbh",
-            "-set", "tmax_day", f"{os.getenv('PRMS_INPUT_DIR')}/tmax.cbh",
-            "-set", "tmin_day", f"{os.getenv('PRMS_INPUT_DIR')}/tmin.cbh",
-            "-set", "nhruOutBaseFileName", f"{os.getenv('PRMS_OUTPUT_DIR')}/"
-            "-set", "nsegmentOutBaseFileName", f"{os.getenv('PRMS_OUTPUT_DIR')}/"
+            "-set", "humidity_day", ensure_directory(f"{os.getenv('PRMS_INPUT_DIR')}/humidity.cbh"),
+            "-set", "precip_day", ensure_directory(f"{os.getenv('PRMS_INPUT_DIR')}/prcp.cbh"),
+            "-set", "tmax_day", ensure_directory(f"{os.getenv('PRMS_INPUT_DIR')}/tmax.cbh"),
+            "-set", "tmin_day", ensure_directory(f"{os.getenv('PRMS_INPUT_DIR')}/tmin.cbh"),
+            "-set", "nhruOutBaseFileName", f"{os.getenv('PRMS_OUTPUT_DIR')}/",
+            "-set", "nsegmentOutBaseFileName", f"{os.getenv('PRMS_OUTPUT_DIR')}/",
             "-C", prms_control_file
         ]
 

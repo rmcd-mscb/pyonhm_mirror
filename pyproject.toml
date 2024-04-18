@@ -19,6 +19,9 @@ docker = "^7.0.0"
 [tool.poetry.scripts]
 pyonhm = "pyonhm.docker_manager:main"
 
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.29.4"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

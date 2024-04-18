@@ -10,8 +10,11 @@
 #           Andrew Halper
 #
 
-echo "Input dir. is $OUT_NCF_DIR"
+echo "The output path is $OUT_WORK_PATH"
+echo "The project root path is $OUT_ROOT_PATH"
 
 /opt/conda/bin/python \
-  -u /usr/local/src/onhm-runners/out2ncf/prms_outputs2c_ncf.py \
-  "$OUT_NCF_DIR"
+  -u "/opt/conda/bin/out2ncf_embedded.py" \
+  "--output-path" "$OUT_WORK_PATH" \
+  "--root-path" "$OUT_ROOT_PATH"
+  

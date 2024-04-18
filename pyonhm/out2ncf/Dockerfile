@@ -5,6 +5,9 @@ FROM nhmusgs/base
 
 LABEL maintainer="ashalper@usgs.gov"
 
+# Copy python script into image
+COPY --chown=nhm out2ncf_embedded.py /opt/conda/bin
+RUN chmod 744 /opt/conda/bin/out2ncf_embedded.py
 # ## out2ncf Installation Location
 #
 # The out2ncf program installs in `/usr/local/bin`.

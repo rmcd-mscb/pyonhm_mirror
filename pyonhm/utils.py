@@ -141,7 +141,7 @@ def get_ncf2cbh_opvars(env_vars: dict, mode: str, ensemble: int = 0):
             "NCF2CBH_IDIR": env_vars.get("CFSV2_NCF_ENSEMBLE_IDIR"),
             "NCF2CBH_PREFIX": env_vars.get("OP_NCF_PREFIX"),
             "NCF2CBH_START_DATE": env_vars.get("START_DATE"),
-            "NCF2CBH_NHMID_DIR": env_vars.get("CFSV2_NCF_IDIR"),
+            "NCF2CBH_ROOT_DIR": env_vars.get("PROJECT_ROOT"),
             "NCF2CBH_MODE": "ensemble"
         }
     elif mode == "median":
@@ -150,7 +150,7 @@ def get_ncf2cbh_opvars(env_vars: dict, mode: str, ensemble: int = 0):
             "NCF2CBH_IDIR": env_vars.get("CFSV2_NCF_ENSEMBLE_MED_IDIR") + start_date + "/",
             "NCF2CBH_PREFIX": env_vars.get("CFSV2_NCF_MEDIAN_PREFIX"),
             "NCF2CBH_START_DATE": env_vars.get("FRCST_START_DATE"),
-            "NCF2CBH_NHMID_DIR": env_vars.get("CFSV2_NCF_IDIR"),
+            "NCF2CBH_ROOT_DIR": env_vars.get("PROJECT_ROOT"),
             "NCF2CBH_ENS_NUM": 0,
             "NCF2CBH_MODE": "median"
         }
@@ -160,10 +160,29 @@ def get_ncf2cbh_opvars(env_vars: dict, mode: str, ensemble: int = 0):
             "NCF2CBH_IDIR": env_vars.get("OP_NCF_IDIR"),
             "NCF2CBH_PREFIX": env_vars.get("OP_NCF_PREFIX"),
             "NCF2CBH_START_DATE": env_vars.get("START_DATE"),
-            "NCF2CBH_NHMID_DIR": env_vars.get("OP_NCF_IDIR"),
+            "NCF2CBH_ROOT_DIR": env_vars.get("PROJECT_ROOT"),
             "NCF2CBH_ENS_NUM": ensemble,
             "NCF2CBH_MODE": "op"
 
+        }
+    return tvars
+
+def get_out2ncf_vars(env_vars: dict, mode: str, ensemble: int = 0):
+    if mode == "ensemble":
+        tvars = {
+            "OUT_WORK_PATH": env_vars.get("OP_DIR") + "/output",
+            "OUT_ROOT_PATH": env_vars.get("PROJECT_ROOT")
+        }
+    elif mode == "median":
+        start_date = env_vars.get("FRCST_START_DATE")
+        tvars = {
+            "OUT_WORK_PATH": env_vars.get("OP_DIR") + "/output",
+            "OUT_ROOT_PATH": env_vars.get("PROJECT_ROOT")
+        }
+    elif mode == "op":
+        tvars = {
+            "OUT_WORK_PATH": env_vars.get("OP_DIR") + "/output",
+            "OUT_ROOT_PATH": env_vars.get("PROJECT_ROOT")
         }
     return tvars
 
@@ -178,16 +197,16 @@ def get_forecast_median_prms_run_env(env_vars, restart_date):
     prms_env = {
         "OP_DIR": op_dir,
         "FRCST_DIR": frcst_dir,
+        "PRMS_RESTART_DATE": restart_date,
         "PRMS_START_TIME": env_vars.get("FRCST_START_TIME"),
         "PRMS_END_TIME": env_vars.get("FRCST_END_TIME"),
         "PRMS_INIT_VARS_FROM_FILE": "1",
-        "PRMS_RESTART_DATE": restart_date,
         "PRMS_VAR_INIT_FILE": f"{project_root}/forecast/restart/{restart_date}.restart",
         "PRMS_SAVE_VARS_TO_FILE": "0",
         "PRMS_CONTROL_FILE": env_vars.get("OP_PRMS_CONTROL_FILE"),
         "PRMS_RUN_TYPE": 1,
-        "PRMS_INPUT_DIR": f"{project_root}/forecast/input/emsemble_median/{start_date_string}",
-        "PRMS_OUTPUT_DIR": f"{project_root}/forecast/output/emsemble_median/{start_date_string}"
+        "PRMS_INPUT_DIR": f"{project_root}/forecast/input/ensemble_median/{start_date_string}",
+        "PRMS_OUTPUT_DIR": f"{project_root}/forecast/output/ensemble_median/{start_date_string}"
     }
     print("PRMS RUN ENV: \n")
     pprint(prms_env)
@@ -366,4 +385,3 @@ def check_consistency(status_list, date_list):
     else:
         # Return False and an empty string if conditions are not met
         return False, ""
-    

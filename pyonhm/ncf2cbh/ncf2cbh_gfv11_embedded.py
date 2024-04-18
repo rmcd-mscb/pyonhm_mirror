@@ -105,7 +105,7 @@ def run(dir, nc_fn, nhmid_dir):
     # nhm_id = np.zeros(114958, dtype=np.int32)
     nhm_id_list = []
     ii = 0
-    nhm_id_file = f"{nhmid_dir}nhm_id"
+    nhm_id_file = f"{nhmid_dir}/nhm_id"
     # changing this to use count because for the upper colorado case,
     # the id's are ordered but begin at ~ 82000.  So we are assuming the data
     # are ordered.
@@ -152,7 +152,7 @@ def run(dir, nc_fn, nhmid_dir):
 
 
 @app.default
-def ncf2cbh(wdir: str, prefix: str, nhmid_dir: str, mode: str, ensemble: int = 0):
+def ncf2cbh(input_path: str, prefix: str, root_path: str, mode: str, ensemble: int = 0):
     """
     Function to process gridmet-etl netcdf output data based on the specified mode.
 
@@ -160,9 +160,9 @@ def ncf2cbh(wdir: str, prefix: str, nhmid_dir: str, mode: str, ensemble: int = 0
     operational gridmet data and on cfsv2 forecast data, both the 48 ensembles and the median ensemble.
 
     Args:
-        wdir (str): The working directory path.
+        input_path (str): The working directory path.
         prefix (str): The prefix for the output file.
-        nhmid_dir (str): The directory containing NHM ID file, essentially the order and index of the data.
+        root_path (str): The directory containing myparam.param andNHM ID file.
         mode (str): The processing mode, either "op", "ensemble", or "median".
         ensemble (int, optional): The ensemble number. Defaults to 0.
 
@@ -174,11 +174,11 @@ def ncf2cbh(wdir: str, prefix: str, nhmid_dir: str, mode: str, ensemble: int = 0
     """
     print("in ncf2cbh")
     if mode == "ensemble":
-        nc_fn = wdir + prefix + "_ensemble_" + str(ensemble) + ".nc"
+        nc_fn = input_path + prefix + "_ensemble_" + str(ensemble) + ".nc"
     elif mode == "median":
-        nc_fn = wdir + prefix + "_median" + ".nc"
+        nc_fn = input_path + prefix + "_median" + ".nc"
     elif mode == "op":
-        nc_fn = wdir + prefix + ".nc"
+        nc_fn = input_path + prefix + ".nc"
     else:
         print(f"mode: {mode} not in ensemble, median, or op")
 
@@ -186,7 +186,7 @@ def ncf2cbh(wdir: str, prefix: str, nhmid_dir: str, mode: str, ensemble: int = 0
         print(f"Error: {nc_fn} does not exist.")
         sys.exit(1)
 
-    run(wdir, nc_fn, nhmid_dir)
+    run(input_path, nc_fn, root_path)
 def main():
     try:
         app()

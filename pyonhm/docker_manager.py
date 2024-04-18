@@ -541,10 +541,11 @@ class DockerManager:
             print("Failed to run container 'prms'. Exiting...")
             sys.exit(1)
 
+        out2ncf_vars = utils.get_out2ncf_vars(env_vars=env_vars, mode="op")
         success = self.run_container(
             image="nhmusgs/out2ncf",
             container_name="out2ncf",
-            env_vars={"OUT_NCF_DIR": env_vars.get("OP_DIR")},
+            env_vars=out2ncf_vars,
         )
         if not success:
             print("Failed to run container 'out2ncf'. Exiting...")
@@ -581,7 +582,7 @@ class DockerManager:
     def fetch_output(self, env_vars):
         client = docker.from_env()
         output_dir = env_vars.get("OUTPUT_DIR")
-        frcst_dir = env_vars.get("FRCST_DIR")
+        frcst_dir = env_vars.get("FRCST_OUTPUT_DIR")
         project_root = env_vars.get("PROJECT_ROOT")
         print(f'Output files will show up in the "{output_dir}" directory.')
 
@@ -639,6 +640,7 @@ class DockerManager:
                 print("Container 'volume_mounter' removed successfully.")
             except docker.errors.NotFound:
                 print("Container already removed or not found.")
+
     def update_cfsv2(self, env_vars: dict, method: str):
         cfsv2_env = utils.get_cfsv2_env(env_vars=env_vars, method=method)
         self.run_container(
@@ -646,6 +648,7 @@ class DockerManager:
             container_name="cfsv2_env",
             env_vars=cfsv2_env,
         )
+
 @app.command(group=g_operational)
 def run_operational(env_file: str, num_days: int=4, test:bool=False):
     """
