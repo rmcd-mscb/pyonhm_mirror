@@ -324,7 +324,7 @@ class DockerManager:
         ]
 
         for context_path, tag in components:
-            success = self.build_image(context_path, tag, no_cache=no_cache)
+            success = self.  build_image(context_path, tag, no_cache=no_cache)
             if not success:
                 print(f"Stopping build process due to failure in building {tag}.")
                 return  # Stop execution if a build fails

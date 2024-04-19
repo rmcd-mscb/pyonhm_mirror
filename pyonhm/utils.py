@@ -195,8 +195,8 @@ def get_forecast_median_prms_run_env(env_vars, restart_date):
     frcst_dir = env_vars.get("FRCST_DIR")
 
     prms_env = {
-        "OP_DIR": op_dir,
-        "FRCST_DIR": frcst_dir,
+        "OP_DIR": project_root,
+        "FRCST_DIR": project_root,
         "PRMS_RESTART_DATE": restart_date,
         "PRMS_START_TIME": env_vars.get("FRCST_START_TIME"),
         "PRMS_END_TIME": env_vars.get("FRCST_END_TIME"),
@@ -229,8 +229,8 @@ def get_prms_run_env(env_vars, restart_date):
     frcst_dir = env_vars.get("FRCST_DIR")
 
     prms_env = {
-        "OP_DIR": op_dir,
-        "FRCST_DIR": op_dir,
+        "OP_DIR": project_root,
+        "FRCST_DIR": project_root,
         "PRMS_START_TIME": start_time,
         "PRMS_END_TIME": end_time,
         "PRMS_INIT_VARS_FROM_FILE": "1",
@@ -240,6 +240,8 @@ def get_prms_run_env(env_vars, restart_date):
         "PRMS_VAR_SAVE_FILE": f"{project_root}/forecast/restart/{end_date_string}.restart",
         "PRMS_CONTROL_FILE": env_vars.get("OP_PRMS_CONTROL_FILE"),
         "PRMS_RUN_TYPE": 0,
+        "PRMS_INPUT_DIR": f"{project_root}/daily/input",
+        "PRMS_OUTPUT_DIR": f"{project_root}/daily/output"
     }
     print("PRMS RUN ENV: \n")
     pprint(prms_env)
@@ -270,8 +272,8 @@ def get_prms_restart_env(env_vars):
     op_dir = env_vars.get("OP_DIR")
     frcst_dir = env_vars.get("FRCST_DIR")
     prms_restart_env = {
-        "OP_DIR": op_dir,
-        "FRCST_DIR": op_dir,
+        "OP_DIR": project_root,
+        "FRCST_DIR": project_root,
         "PRMS_START_TIME": env_vars.get("START_TIME"),
         "PRMS_END_TIME": env_vars.get("SAVE_RESTART_TIME"),
         "PRMS_INIT_VARS_FROM_FILE": 1,
@@ -280,6 +282,8 @@ def get_prms_restart_env(env_vars):
         "PRMS_VAR_SAVE_FILE": f"{project_root}/daily/restart/{env_vars.get('SAVE_RESTART_DATE')}.restart",
         "PRMS_CONTROL_FILE": env_vars.get("OP_PRMS_CONTROL_FILE"),
         "PRMS_RUN_TYPE": 0,
+        "PRMS_INPUT_DIR": f"{project_root}/daily/input",
+        "PRMS_OUTPUT_DIR": f"{project_root}/daily/output"
     }
     print("PRMS RESTART RUN ENV: \n")
     pprint(prms_restart_env)

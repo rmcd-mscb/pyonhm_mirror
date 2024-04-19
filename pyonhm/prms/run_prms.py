@@ -69,6 +69,14 @@ def main():
             "-set", "var_init_file", os.getenv("PRMS_VAR_INIT_FILE"),
             "-set", "save_vars_to_file", os.getenv("PRMS_SAVE_VARS_TO_FILE"),
             "-set", "var_save_file", os.getenv("PRMS_VAR_SAVE_FILE"),
+            "-set", "humidity_day", ensure_directory(f"{os.getenv('PRMS_INPUT_DIR')}/humidity.cbh"),
+            "-set", "precip_day", ensure_directory(f"{os.getenv('PRMS_INPUT_DIR')}/prcp.cbh"),
+            "-set", "tmax_day", ensure_directory(f"{os.getenv('PRMS_INPUT_DIR')}/tmax.cbh"),
+            "-set", "tmin_day", ensure_directory(f"{os.getenv('PRMS_INPUT_DIR')}/tmin.cbh"),
+            "-set", "nhruOutBaseFileName", f"{os.getenv('PRMS_OUTPUT_DIR')}/",
+            "-set", "nsegmentOutBaseFileName", f"{os.getenv('PRMS_OUTPUT_DIR')}/",
+            "-set", "model_output_file", f"{os.getenv('PRMS_OUTPUT_DIR')}/model.out",
+            "-set", "param_file", f"{op_dir}/myparam.param",
             "-C", prms_control_file
         ]
     elif prms_run_type == '1':
@@ -88,6 +96,8 @@ def main():
             "-set", "tmin_day", ensure_directory(f"{os.getenv('PRMS_INPUT_DIR')}/tmin.cbh"),
             "-set", "nhruOutBaseFileName", f"{os.getenv('PRMS_OUTPUT_DIR')}/",
             "-set", "nsegmentOutBaseFileName", f"{os.getenv('PRMS_OUTPUT_DIR')}/",
+            "-set", "model_output_file", f"{os.getenv('PRMS_OUTPUT_DIR')}/model.out",
+            "-set", "param_file", f"{frcst_dir}/myparam.param",
             "-C", prms_control_file
         ]
 
