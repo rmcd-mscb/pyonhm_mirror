@@ -9,6 +9,7 @@ from docker.errors import ContainerError, ImageNotFound, APIError
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing_extensions import Annotated
+from typing import Any
 
 app = App(default_parameter=Parameter(negative=()))
 g_build_load = Group.create_ordered(name="Admin Commands", help="Build images and load supporting data into volume")
@@ -16,6 +17,15 @@ g_operational = Group.create_ordered(name="Operational Commands", help="NHM dail
 g_sub_seasonal = Group.create_ordered(name="Sub-seasonal Forecast Commands", help="NHM sub-seasonal forecasts model methods")
 g_seasonal = Group.create_ordered(name="Seasonal Forecast Commands", help="NHM seasonal forecasts model methods")
 
+def validate_forecast(type_, value: str):
+    valid_forecasts = ["median", "ensemble"]
+    if value not in validate_forecast:
+        raise  ValueError(f"Invalid --forecast-type: {value}. Expected one of {valid_forecasts}")
+
+def validate_method(type_, value: str):
+    valid_method = ["seasonal", "sub-seasonal"]
+    if value not in valid_method:
+        raise  ValueError(f"Invalid --method: {value}. Expected one of {valid_method}")
 
 class DockerManager:
     def __init__(self):
@@ -402,7 +412,7 @@ class DockerManager:
         if method not in ["median", "ensemble"]:
             raise ValueError(f"Invalid method '{method}'. Mode must be 'median' or 'ensemble'.")
         median_path = Path(env_vars.get("CFSV2_NCF_IDIR")) / "ensemble_median"
-        ensemble_path = Path(env_vars.get("CFSV2_NCF_IDIR")) / "ensembles/"
+        ensemble_path = Path(env_vars.get("CFSV2_NCF_IDIR")) / "ensembles"
         print("Running forecast tasks...")
         # Get the most recent operational run restart date.  During an operational run, a restart file representing
         # The last day of operational simulation is placed in forecast/restart/ directory.
@@ -438,6 +448,17 @@ class DockerManager:
             if not success:
                 print("Failed to run container 'prms'. Exiting...")
                 sys.exit(1)
+
+            out2ncf_vars = utils.get_out2ncf_vars(env_vars=env_vars, mode="median")
+            success = self.run_container(
+                image="nhmusgs/out2ncf",
+                container_name="out2ncf",
+                env_vars=out2ncf_vars,
+            )
+            if not success:
+                print("Failed to run container 'out2ncf'. Exiting...")
+                sys.exit(1)
+            
     def operational_run(
         self,
         env_vars: dict,
@@ -691,6 +712,31 @@ def run_sub_seasonal(env_file: str, method: str):
         print("Failed to initialize Docker client.")
     docker_manager.forecast_run(env_vars=dict_env_vars, method=method)
     print("TODO")
+
+@app.command(group=g_sub_seasonal)
+def run_list_available_forecasts(
+        env_file:str,
+        forecast_type: 
+        Annotated[
+            str,
+            Parameter(
+                validator=validate_forecast
+            )
+        ], 
+        method:
+        Annotated[ 
+            str,
+            Parameter(
+                validator=validate_method
+            )
+        ]
+):
+    docker_manager = DockerManager()
+    dict_env_vars = utils.load_env_file(env_file)
+    if docker_manager.client is not None:
+        print("Docker client initialized successfully.")
+    else:
+        print("Failed to initialize Docker client.")
 
 @app.command(group=g_sub_seasonal)
 def run_update_cfsv2_data(env_file: str, method: str):

@@ -13,7 +13,7 @@
 echo "NHM_SOURCE_DIR is $NHM_SOURCE_DIR"
 echo "START DATE is $START_DATE"
 echo "END DATE is $END_DATE"
-echo "TARGET FILE is $GM_INPUT_FILE"
+echo "TARGET FILE is $GM_TARGET_FILE"
 echo "OUTPATH is $OP_NCF_IDIR"
 echo "WEIGHTS FILE is $GM_WEIGHTS_FILE"
 
@@ -21,7 +21,7 @@ gridmetetl gridmet-etl \
      --start-date "$START_DATE" \
      --end-date "$END_DATE" \
      --file-prefix gm \
-     --target-file "$GM_INPUT_FILE" \
+     --target-file "$GM_TARGET_FILE" \
      --output-path "$OP_NCF_IDIR" \
      --weight-file "$GM_WEIGHTS_FILE" \
      --fid nhm_id \

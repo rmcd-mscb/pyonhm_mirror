@@ -168,6 +168,8 @@ def get_ncf2cbh_opvars(env_vars: dict, mode: str, ensemble: int = 0):
     return tvars
 
 def get_out2ncf_vars(env_vars: dict, mode: str, ensemble: int = 0):
+    project_root = env_vars.get("PROJECT_ROOT")
+    start_date_string = env_vars.get("FRCST_START_DATE")
     if mode == "ensemble":
         tvars = {
             "OUT_WORK_PATH": env_vars.get("OP_DIR") + "/output",
@@ -176,7 +178,7 @@ def get_out2ncf_vars(env_vars: dict, mode: str, ensemble: int = 0):
     elif mode == "median":
         start_date = env_vars.get("FRCST_START_DATE")
         tvars = {
-            "OUT_WORK_PATH": env_vars.get("OP_DIR") + "/output",
+            "OUT_WORK_PATH": f"{project_root}/forecast/output/ensemble_median/{start_date_string}",
             "OUT_ROOT_PATH": env_vars.get("PROJECT_ROOT")
         }
     elif mode == "op":
@@ -255,7 +257,7 @@ def get_cfsv2_env(env_vars: dict, method: str):
         mode = 1
     return {
         "MODEL_PARAM_FILE": env_vars.get("CFSV2_NCF_MPF"),
-        "TARGET_FILE": env_vars.get("GM_INPUT_FILE"),
+        "TARGET_FILE": env_vars.get("GM_TARGET_FILE"),
         "OUTPATH": env_vars.get("CFSV2_NCF_IDIR"),
         "WEIGHTS_FILE": env_vars.get("GM_WEIGHTS_FILE"),
         "METHOD": mode,
