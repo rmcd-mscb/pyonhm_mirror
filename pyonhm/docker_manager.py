@@ -591,8 +591,9 @@ class DockerManager:
             container_name="gridmetetl",
             env_vars=env_vars,
         )
+        ncf2cbh_vars = utils.get_ncf2cbh_opvars(env_vars=env_vars, mode="op")
         self.run_container(
-            image="nhmusgs/ncf2cbh", container_name="ncf2cbh", env_vars=env_vars
+            image="nhmusgs/ncf2cbh", container_name="ncf2cbh", env_vars=ncf2cbh_vars
         )
 
         prms_restart_env = utils.get_prms_restart_env(env_vars=env_vars)
