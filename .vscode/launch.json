@@ -1,0 +1,90 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: update-operational-restart",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/pyonhm/docker_manager.py",
+            "console": "integratedTerminal",
+            "args": [
+                // "pyonhm",
+                "update-operational-restart",
+                "--env-file",
+                "nhm_uc.env"
+            ],
+            "envFile": "${workspaceFolder}/nhm_uc.env", // Adjust if your env file is located elsewhere
+            "cwd": "${workspaceFolder}" // Sets the current working directory
+        },
+        {
+            "name": "Python Debugger: run_update_cfsv2_data",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/pyonhm/docker_manager.py",
+            "console": "integratedTerminal",
+            "args": [
+                // "pyonhm",
+                "run-update-cfsv2-data",
+                "--env-file",
+                "nhm_uc.env",
+                "--method",
+                "ensemble"
+            ],
+            "envFile": "${workspaceFolder}/nhm_uc.env", // Adjust if your env file is located elsewhere
+            "cwd": "${workspaceFolder}" // Sets the current working directory
+        },
+        {
+            "name": "Python Debugger: run operational",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/pyonhm/docker_manager.py",
+            "console": "integratedTerminal",
+            "args": [
+                // "pyonhm",
+                "run-operational",
+                "--env-file",
+                "nhm_uc.env"
+            ],
+            "envFile": "${workspaceFolder}/nhm_uc.env", // Adjust if your env file is located elsewhere
+            "cwd": "${workspaceFolder}" // Sets the current working directory
+        },
+        {
+            "name": "Python Debugger: run operational test",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/pyonhm/docker_manager.py",
+            "console": "integratedTerminal",
+            "args": [
+                // "pyonhm",
+                "run-operational",
+                "--env-file",
+                "nhm_uc.env",
+                "--num-days",
+                "2",
+                "--test"
+            ],
+            "envFile": "${workspaceFolder}/nhm_uc.env", // Adjust if your env file is located elsewhere
+            "cwd": "${workspaceFolder}" // Sets the current working directory
+        },
+        {
+            "name": "Python Debugger: run-sub-seasonal",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/pyonhm/docker_manager.py",
+            "console": "integratedTerminal",
+            "args": [
+                // "pyonhm",
+                "run-sub-seasonal",
+                "--env-file",
+                "nhm_uc.env",
+                "--method",
+                "median"
+            ],
+            "envFile": "${workspaceFolder}/nhm_uc.env", // Adjust if your env file is located elsewhere
+            "cwd": "${workspaceFolder}" // Sets the current working directory
+        }
+    ]
+}
