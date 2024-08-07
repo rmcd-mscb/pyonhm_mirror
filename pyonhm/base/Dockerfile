@@ -57,49 +57,52 @@ RUN apt-get update --fix-missing && \
 	    unzip \
         vim
 RUN apt-get autoclean && apt-get purge
+## Copy the certificate to the container
+COPY DOIRootCA2.cer /usr/local/share/ca-certificates/DOIRootCA2.crt
 
-# ## DOI SSL Intercept Root Certificate
-#
-# The [DOI intercept root
-# certificate](https://github.com/usgs/best-practices/blob/master/ssl/WorkingWithinSSLIntercept.md)
-# is required within .usgs.gov to make secure connections outside the
-# subnet.
-RUN if wget http://sslhelp.doi.net/docs/DOIRootCA2.cer ; then \
-        mkdir -p /usr/local/share/ca-certificates ; \
-        mv DOIRootCA2.cer /usr/local/share/ca-certificates/DOIRootCA2.crt ; \
-        update-ca-certificates ; \
-    fi
+# Update CA certificates
+RUN update-ca-certificates
 
-RUN export SSL_CERT_FILE=/usr/local/share/ca-certificates/DOIRootCA2.crt
-RUN export CURL_CA_BUNDLE="${SSL_CERT_FILE}"
-RUN export PIP_CERT="${SSL_CERT_FILE}"
-# Add the DOI SSL Intercept Root Certificate
-# RUN wget http://sslhelp.doi.net/docs/DOIRootCA2.cer -O /usr/local/share/ca-certificates/DOIRootCA2.crt && \
-#     update-ca-certificates
+# Set environment variables for SSL certificates
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV CURL_CA_BUNDLE=${SSL_CERT_FILE}
+ENV PIP_CERT=${SSL_CERT_FILE}
+ENV GIT_SSL_CAINFO=${SSL_CERT_FILE}
+ENV REQUESTS_CA_BUNDLE=${SSL_CERT_FILE}
 
-# Set environment variables to use the custom certificate
-# ENV SSL_CERT_FILE=/usr/local/share/ca-certificates/DOIRootCA2.crt
-# ENV CURL_CA_BUNDLE=${SSL_CERT_FILE}
-# ENV PIP_CERT=${SSL_CERT_FILE}
-# ENV REQUESTS_CA_BUNDLE=${SSL_CERT_FILE}
-# ENV GIT_SSL_CAINFO=${SSL_CERT_FILE}
-# RUN mamba config --set ssl_verify /usr/local/share/ca-certificates/DOIRootCA2.crt
+# Verify environment variables
+RUN echo "SSL_CERT_FILE=${SSL_CERT_FILE}" && \
+    echo "CURL_CA_BUNDLE=${CURL_CA_BUNDLE}" && \
+    echo "PIP_CERT=${PIP_CERT}" && \
+    echo "GIT_SSL_CAINFO=${GIT_SSL_CAINFO}" && \
+    echo "REQUESTS_CA_BUNDLE=${REQUESTS_CA_BUNDLE}"
+# # Add the DOI SSL Intercept Root Certificate
+# # RUN wget http://sslhelp.doi.net/docs/DOIRootCA2.cer -O /usr/local/share/ca-certificates/DOIRootCA2.crt && \
+# #     update-ca-certificates
 
-# ## Conda Installation
-#
-# The base image Conda packages are updated to the most recent
-# versions available.
-# ### Additional Conda Packages
-#
-# Additional specific versions of Conda packages are required for
-# Python support in the gridmet, gridmetetl, gridmets2s, ncf2cbh,
-# cbhfiller, out2ncf, and verifier images.
-# Combining mamba install and pip install in a single RUN command
+# # Set environment variables to use the custom certificate
+# # ENV SSL_CERT_FILE=/usr/local/share/ca-certificates/DOIRootCA2.crt
+# # ENV CURL_CA_BUNDLE=${SSL_CERT_FILE}
+# # ENV PIP_CERT=${SSL_CERT_FILE}
+# # ENV REQUESTS_CA_BUNDLE=${SSL_CERT_FILE}
+# # ENV GIT_SSL_CAINFO=${SSL_CERT_FILE}
+# # RUN mamba config --set ssl_verify /usr/local/share/ca-certificates/DOIRootCA2.crt
+
+# # ## Conda Installation
+# #
+# # The base image Conda packages are updated to the most recent
+# # versions available.
+# # ### Additional Conda Packages
+# #
+# # Additional specific versions of Conda packages are required for
+# # Python support in the gridmet, gridmetetl, gridmets2s, ncf2cbh,
+# # cbhfiller, out2ncf, and verifier images.
+# # Combining mamba install and pip install in a single RUN command
 RUN mamba update -n base mamba -y && \
     mamba install -n base -c conda-forge -y \
-        python \
+        python=3.11 \
         pip \
-        gdptools=0.2.7 \
+        gdptools \
         cyclopts \
         dask \
         bottleneck \
@@ -113,32 +116,37 @@ RUN mamba update -n base mamba -y && \
         pint-xarray && \
     mamba clean -a && \
     /bin/bash -c "source activate base"
-    # && pip --trusted-host pypi.org --trusted-host files.pythonhosted.org install -vvv git+https://code.chs.usgs.gov/wma/nhm/gridmetetl.git@check2
+#     # && pip --trusted-host pypi.org --trusted-host files.pythonhosted.org install -vvv git+https://code.chs.usgs.gov/wma/nhm/gridmetetl.git@check2
 
-# ## Source Code Location
-#
-# The NHM source code location can be configured by setting the base
-# image's `NHM_SOURCE_DIR` environment variable.
+# # ## Source Code Location
+# #
+# # The NHM source code location can be configured by setting the base
+# # image's `NHM_SOURCE_DIR` environment variable.
 ENV NHM_SOURCE_DIR=/usr/local/src
 
-# ## ONHM Runners Version
-#
-# The version of the ONHM Runners source referenced by the ncf2cbh,
-# cbhfiller, and out2ncf images can be declared by setting
-# the `VERSION_ONHM_RUNNERS` argument in the base image.
-ARG VERSION_ONHM_RUNNERS=0.2.5
-ARG VERSION_ONHM_RUNNERS=main
-RUN git -c advice.detachedHead=false clone \
-    https://code.chs.usgs.gov/wma/nhm/onhm-runners.git \
-    --branch $VERSION_ONHM_RUNNERS --depth=1 $NHM_SOURCE_DIR/onhm-runners && \
-    cd $NHM_SOURCE_DIR/onhm-runners && \
-    rm -rf .git && \
-    rm .gitignore README.md .project .pydevproject
+# # ## ONHM Runners Version
+# #
+# # The version of the ONHM Runners source referenced by the ncf2cbh,
+# # cbhfiller, and out2ncf images can be declared by setting
+# # the `VERSION_ONHM_RUNNERS` argument in the base image.
+# # ARG VERSION_ONHM_RUNNERS=0.2.5
+# # ARG VERSION_ONHM_RUNNERS=main
+# # RUN git -c advice.detachedHead=false clone \
+# #     https://code.chs.usgs.gov/wma/nhm/onhm-runners.git \
+# #     --branch $VERSION_ONHM_RUNNERS --depth=1 $NHM_SOURCE_DIR/onhm-runners && \
+# #     cd $NHM_SOURCE_DIR/onhm-runners && \
+# #     rm -rf .git && \
+# #     rm .gitignore README.md .project .pydevproject
 
 # RUN pip --trusted-host pypi.org --trusted-host files.pythonhosted.org install -vvv git+https://code.chs.usgs.gov/wma/nhm/gridmetetl.git@check2
-RUN pip --trusted-host pypi.org --trusted-host files.pythonhosted.org install -vvv git+https://github.com/rmcd-mscb/gridmet-etl.git
+# # Install the package from GitHub using a personal access token
+# ARG GITHUB_TOKEN
+# # Ensure git config is set to trust the certificate path
+# RUN git config --global http.sslCAInfo ${GIT_SSL_CAINFO}
+# # RUN pip  install -v git+https://github.com/rmcd-mscb/gridmet-etl.git
+RUN pip install -vvv --trusted-host pypi.org --trusted-host files.pythonhosted.org git+https://github.com/rmcd-mscb/gridmet-etl.git
 
-# ## gridmetetl Output Directory
+# # ## gridmetetl Output Directory
 #
 # The gridmetetl output directory is `/nhm/gridmetetl/Output`.
 RUN mkdir -p /nhm/gridmetetl/Output
