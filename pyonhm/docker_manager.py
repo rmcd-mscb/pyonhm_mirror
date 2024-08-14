@@ -2,6 +2,7 @@ from cyclopts import App, Group, Parameter
 import argparse
 from io import BytesIO
 import docker
+import os
 import sys
 import subprocess
 from pyonhm import utils
@@ -55,17 +56,39 @@ class DockerManager:
         # Check if self.client is initialized
         if not self.client:
             print("Docker client is not initialized. Cannot build image.")
-            return
-
+            return False
+        
+        # Retrieve the GitHub token from an environment variable
+        github_token = os.getenv('GITHUB_TOKEN')
+        if not github_token:
+            print("GITHUB_TOKEN environment variable is not set. Cannot build image.")
+            return False
+        
         print(f"Building Docker image: {tag} from {context_path}", flush=True)
         try:
             response = self.client.images.build(
-                path=context_path, tag=tag, rm=True, nocache=no_cache
+                path=context_path,
+                tag=tag,
+                rm=True,
+                nocache=no_cache,
+                buildargs={'GITHUB_TOKEN': github_token}
             )
-            for line in response[1]:
-                if "stream" in line:
-                    print(line["stream"], end="", flush=True)
+            # Iterate over the response to capture all output
+            for chunk in response[1]:
+                if 'stream' in chunk:
+                    print(chunk['stream'], end='', flush=True)
+                if 'errorDetail' in chunk:
+                    print(chunk['errorDetail']['message'], flush=True)
             return True
+        except docker.errors.BuildError as build_error:
+            print(f"BuildError: {build_error}", flush=True)
+            if hasattr(build_error, 'build_log'):
+                for chunk in build_error.build_log:
+                    if 'stream' in chunk:
+                        print(chunk['stream'], end='', flush=True)
+                    if 'errorDetail' in chunk:
+                        print("ErrorDetail: ", chunk['errorDetail']['message'], flush=True)
+            return False
         except Exception as e:
             print(f"Failed to build Docker image: {e}")
             return False
@@ -158,7 +181,7 @@ class DockerManager:
             check_path="/nhm/gridmetetl/nhm_hru_data_gfv11",
         ):
             hru_download_commands = f"""
-                wget --waitretry=3 --retry-connrefused {env_vars['HRU_SOURCE']} ;
+                wget --waitretry=3 --retry-connrefused --timeout=30 --tries=10 {env_vars['HRU_SOURCE']} ;
                 unzip -o {env_vars['HRU_DATA_PKG']} -d /nhm/gridmetetl ;
                 chown -R nhm /nhm/gridmetetl ;
                 chmod -R 766 /nhm/gridmetetl
