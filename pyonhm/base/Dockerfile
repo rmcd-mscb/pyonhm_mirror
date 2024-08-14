@@ -8,7 +8,7 @@
 # [docker-miniconda](https://hub.docker.com/r/continuumio/miniconda3).
 FROM condaforge/mambaforge:23.3.1-1
 
-LABEL maintainer="ashalper@usgs.gov"
+LABEL maintainer="rmcd@usgs.gov"
 
 # ## Additional Packages
 #
@@ -102,7 +102,7 @@ RUN mamba update -n base mamba -y && \
     mamba install -n base -c conda-forge -y \
         python=3.11 \
         pip \
-        gdptools \
+        gdptools=0.2.10 \
         cyclopts \
         dask \
         bottleneck \

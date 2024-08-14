@@ -57,6 +57,7 @@ class DockerManager:
         if not self.client:
             print("Docker client is not initialized. Cannot build image.")
             return False
+        
         # Retrieve the GitHub token from an environment variable
         github_token = os.getenv('GITHUB_TOKEN')
         if not github_token:
@@ -180,7 +181,7 @@ class DockerManager:
             check_path="/nhm/gridmetetl/nhm_hru_data_gfv11",
         ):
             hru_download_commands = f"""
-                wget --waitretry=3 --retry-connrefused {env_vars['HRU_SOURCE']} ;
+                wget --waitretry=3 --retry-connrefused --timeout=30 --tries=10 {env_vars['HRU_SOURCE']} ;
                 unzip -o {env_vars['HRU_DATA_PKG']} -d /nhm/gridmetetl ;
                 chown -R nhm /nhm/gridmetetl ;
                 chmod -R 766 /nhm/gridmetetl
