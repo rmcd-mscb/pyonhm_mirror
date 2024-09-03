@@ -348,7 +348,7 @@ def gridmet_updated() -> bool:
             status_list.append(False)
             date_list.append("")
 
-    logger.info("Status of data availability (True = not from yesterday): %s", status_list)
+    logger.info("Status of data availability (False = not from yesterday): %s", status_list)
     logger.info("Dates of the datasets: %s", date_list)
     return status_list, date_list
 
