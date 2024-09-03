@@ -8,6 +8,7 @@ import xmltodict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from pprint import pprint
+from pprint import pformat
 import pytz
 
 # Configure logging
@@ -219,20 +220,14 @@ def get_forecast_median_prms_run_env(env_vars, restart_date):
     return prms_env
 
 def get_prms_run_env(env_vars, restart_date):
-    # Convert START_DATE string to datetime object
     start_date = datetime.strptime(env_vars.get("START_DATE"), "%Y-%m-%d")
-    # Format START_DATE as needed
     start_time = start_date.strftime("%Y,%m,%d,00,00,00")
     env_vars["START_TIME"] = start_time
 
-    # Convert END_DATE string to datetime object
     end_date = datetime.strptime(env_vars.get("END_DATE"), "%Y-%m-%d")
-    # Format END_DATE as needed
     end_time = end_date.strftime("%Y,%m,%d,00,00,00")
     end_date_string = env_vars.get("END_DATE")
     project_root = env_vars.get("PROJECT_ROOT")
-    op_dir = env_vars.get("OP_DIR")
-    frcst_dir = env_vars.get("FRCST_DIR")
 
     prms_env = {
         "OP_DIR": project_root,
@@ -249,8 +244,10 @@ def get_prms_run_env(env_vars, restart_date):
         "PRMS_INPUT_DIR": f"{project_root}/daily/input",
         "PRMS_OUTPUT_DIR": f"{project_root}/daily/output"
     }
-    print("PRMS RUN ENV: \n")
-    pprint(prms_env)
+    
+    # Use pprint to format the dictionary for logging
+    logger.debug("PRMS RUN ENV:\n%s", pformat(prms_env))
+    
     return prms_env
 
 
