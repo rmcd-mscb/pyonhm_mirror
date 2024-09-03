@@ -1,3 +1,4 @@
+import logging
 import os
 import pprint
 import re
@@ -8,6 +9,9 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from pprint import pprint
 import pytz
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 def adjust_date_str(date_str, days):
@@ -327,13 +331,11 @@ def gridmet_updated() -> bool:
     ]
     urlsuffix = "dataset.xml"
 
-    # Timezone-aware datetime objects
     tz = pytz.timezone("America/Denver")  # Replace with your timezone
     nowutc = datetime.now(pytz.utc)
     now = nowutc.astimezone(tz)
     yesterday = (now - timedelta(days=1)).date()
 
-    # Initialize the result lists
     status_list = []
     date_list = []
 
@@ -342,18 +344,17 @@ def gridmet_updated() -> bool:
         if xml_data := _getxml(masterURL):
             datadef = xml_data["gridDataset"]["TimeSpan"]["end"]
             gm_date = datetime.strptime(datadef[:10], "%Y-%m-%d").date()
-            # Append status and date to the lists
             status_list.append(gm_date == yesterday)
             date_list.append(gm_date.strftime("%Y-%m-%d"))
         else:
-            print(f"Failed to fetch or parse data for {data}")
+            logger.error(f"Failed to fetch or parse data for {data}")
             status_list.append(False)
             date_list.append("")
 
-    # Optionally print the lists (can be removed or adjusted per your requirements)
-    print("Status of data availability (True = not from yesterday):", status_list)
-    print("Dates of the datasets:", date_list)
+    logger.info("Status of data availability (True = not from yesterday): %s", status_list)
+    logger.info("Dates of the datasets: %s", date_list)
     return status_list, date_list
+
 
 
 def is_next_day_present(date_folders: list[str], user_date: str) -> Tuple[bool, str]:
