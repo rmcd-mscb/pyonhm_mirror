@@ -2,6 +2,7 @@ from cyclopts import App, Group, Parameter
 import argparse
 from io import BytesIO
 import docker
+import logging
 import os
 import sys
 import subprocess
@@ -11,6 +12,20 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing_extensions import Annotated
 from typing import Any
+from logging.handlers import RotatingFileHandler
+
+# Configure logging with rotation
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        RotatingFileHandler('docker_manager.log', maxBytes=5*1024*1024, backupCount=5)  # 5MB per file, keep 5 backups
+    ]
+)
+
+logger = logging.getLogger(__name__)
+
 
 app = App(default_parameter=Parameter(negative=()))
 g_build_load = Group.create_ordered(name="Admin Commands", help="Build images and load supporting data into volume")
@@ -55,16 +70,16 @@ class DockerManager:
         """
         # Check if self.client is initialized
         if not self.client:
-            print("Docker client is not initialized. Cannot build image.")
+            logger.error("Docker client is not initialized. Cannot build image.")
             return False
         
         # Retrieve the GitHub token from an environment variable
         github_token = os.getenv('GITHUB_TOKEN')
         if not github_token:
-            print("GITHUB_TOKEN environment variable is not set. Cannot build image.")
+            logger.error("GITHUB_TOKEN environment variable is not set. Cannot build image.")
             return False
         
-        print(f"Building Docker image: {tag} from {context_path}", flush=True)
+        logger.info(f"Building Docker image: {tag} from {context_path}")
         try:
             response = self.client.images.build(
                 path=context_path,
@@ -76,21 +91,21 @@ class DockerManager:
             # Iterate over the response to capture all output
             for chunk in response[1]:
                 if 'stream' in chunk:
-                    print(chunk['stream'], end='', flush=True)
+                    logger.debug(chunk['stream'].strip())
                 if 'errorDetail' in chunk:
-                    print(chunk['errorDetail']['message'], flush=True)
+                    logger.error(chunk['errorDetail']['message'].strip())
             return True
         except docker.errors.BuildError as build_error:
-            print(f"BuildError: {build_error}", flush=True)
+            logger.error(f"BuildError: {build_error}")
             if hasattr(build_error, 'build_log'):
                 for chunk in build_error.build_log:
                     if 'stream' in chunk:
-                        print(chunk['stream'], end='', flush=True)
+                        logger.debug(chunk['stream'].strip())
                     if 'errorDetail' in chunk:
-                        print("ErrorDetail: ", chunk['errorDetail']['message'], flush=True)
+                        logger.error(f"ErrorDetail: {chunk['errorDetail']['message'].strip()}")
             return False
         except Exception as e:
-            print(f"Failed to build Docker image: {e}")
+            logger.exception("Failed to build Docker image.")
             return False
 
     def container_exists_and_running(self, container_name):
@@ -202,7 +217,7 @@ class DockerManager:
             check_path="/nhm/NHM_PRMS_CONUS_GF_1_1",
         ):
             prms_download_commands = f"""
-                wget --waitretry=3 --retry-connrefused {env_vars['PRMS_SOURCE']} ;
+                wget --waitretry=3 --retry-connrefused --timeout=30 --tries=10 {env_vars['PRMS_SOURCE']} ;
                 unzip {env_vars['PRMS_DATA_PKG']} ;
                 chown -R nhm:nhm /nhm/NHM_PRMS_CONUS_GF_1_1 ;
                 chmod -R 766 /nhm/NHM_PRMS_CONUS_GF_1_1
@@ -335,18 +350,8 @@ class DockerManager:
     def build_images(self, no_cache: bool = False):
         """
         Build Docker images for various components of the application.
-
-        This method orchestrates the building of Docker images for the application's components,
-        including base, gridmetetl, ncf2cbh, prms, and out2ncf. It allows for the option to build
-        these images without using the cache to ensure that the latest versions of all dependencies
-        are used.
-
-        Parameters
-        ----------
-        no_cache : bool, optional
-            A boolean flag indicating whether the Docker build process should ignore the cache.
         """
-        print("Building Docker images...")
+        logger.info("Building Docker images...")
         components = [
             ("./pyonhm/base", "nhmusgs/base"),
             ("./pyonhm/gridmetetl", "nhmusgs/gridmetetl:0.30"),
@@ -357,10 +362,12 @@ class DockerManager:
         ]
 
         for context_path, tag in components:
-            success = self.  build_image(context_path, tag, no_cache=no_cache)
+            success = self.build_image(context_path, tag, no_cache=no_cache)
             if not success:
-                print(f"Stopping build process due to failure in building {tag}.")
+                logger.error(f"Stopping build process due to failure in building {tag}.")
                 return  # Stop execution if a build fails
+        logger.info("Docker images built successfully.")
+
 
 
     def load_data(self, env_vars:dict):
@@ -623,6 +630,16 @@ class DockerManager:
         self.run_container(
             image="nhmusgs/prms:5.2.1", container_name="prms", env_vars=prms_restart_env
         )
+
+        out2ncf_vars = utils.get_out2ncf_vars(env_vars=env_vars, mode="op")
+        success = self.run_container(
+            image="nhmusgs/out2ncf",
+            container_name="out2ncf",
+            env_vars=out2ncf_vars,
+        )
+        if not success:
+            print("Failed to run container 'out2ncf'. Exiting...")
+            sys.exit(1)
 
     def fetch_output(self, env_vars):
         client = docker.from_env()
