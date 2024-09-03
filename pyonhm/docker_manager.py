@@ -10,6 +10,7 @@ from pyonhm import utils
 from docker.errors import ContainerError, ImageNotFound, APIError
 from datetime import datetime, timedelta
 from pathlib import Path
+import shlex
 from typing_extensions import Annotated
 from typing import Any
 from logging.handlers import RotatingFileHandler
@@ -187,27 +188,49 @@ class DockerManager:
         Download HRU data if not already downloaded.
 
         Args:
-                env_vars: Dictionary of environment variables to use when
+            env_vars: Dictionary of environment variables to use when
         """
+        logger.info("Checking if HRU data exists...")
+
         if not self.check_data_exists(
             image="nhmusgs/base",
             container_name="base",
             volume="nhm_nhm",
             check_path="/nhm/gridmetetl/nhm_hru_data_gfv11",
         ):
-            hru_download_commands = f"""
-                wget --waitretry=3 --retry-connrefused --timeout=30 --tries=10 {env_vars['HRU_SOURCE']} ;
-                unzip -o {env_vars['HRU_DATA_PKG']} -d /nhm/gridmetetl ;
-                chown -R nhm /nhm/gridmetetl ;
-                chmod -R 766 /nhm/gridmetetl
-            """
-            self.download_data(
-                image="nhmusgs/base",
-                container_name="base",
-                working_dir="/nhm",
-                download_path="/nhm/gridmetetl/nhm_hru_data_gfv11",
-                download_commands=hru_download_commands,
-            )
+            logger.info("HRU data not found. Proceeding with download.")
+
+            # Validate required environment variables
+            if 'HRU_SOURCE' not in env_vars or 'HRU_DATA_PKG' not in env_vars:
+                logger.error("Missing required environment variables: HRU_SOURCE or HRU_DATA_PKG")
+                return
+
+            # Sanitize and validate inputs
+            hru_source = shlex.quote(env_vars['HRU_SOURCE'])
+            hru_data_pkg = shlex.quote(env_vars['HRU_DATA_PKG'])
+
+            # Construct command as a list of arguments
+            download_commands = [
+                "wget", "--waitretry=3", "--retry-connrefused", "--timeout=30", "--tries=10", hru_source, "&&",
+                "unzip", "-o", hru_data_pkg, "-d", "/nhm/gridmetetl", "&&",
+                "chown", "-R", "nhm", "/nhm/gridmetetl", "&&",
+                "chmod", "-R", "766", "/nhm/gridmetetl"
+            ]
+
+            # Log the commands for debugging purposes
+            logger.debug("HRU download commands: %s", download_commands)
+
+            try:
+                # Run the command safely using subprocess
+                result = subprocess.run(" ".join(download_commands), shell=True, check=True, executable="/bin/bash")
+                logger.info("Download and extraction completed successfully.")
+            except subprocess.CalledProcessError as e:
+                logger.error(f"Command failed with error: {e}")
+                return
+
+        else:
+            logger.info("HRU data already exists. Skipping download.")
+
 
     def download_model_data(self, env_vars):
         if not self.check_data_exists(
