@@ -215,8 +215,8 @@ def get_forecast_median_prms_run_env(env_vars, restart_date):
         "PRMS_INPUT_DIR": f"{project_root}/forecast/input/ensemble_median/{start_date_string}",
         "PRMS_OUTPUT_DIR": f"{project_root}/forecast/output/ensemble_median/{start_date_string}"
     }
-    print("PRMS RUN ENV: \n")
-    pprint(prms_env)
+    logger.debug("PRMS RUN ENV:\n%s", pformat(prms_env))
+    
     return prms_env
 
 def get_prms_run_env(env_vars, restart_date):
@@ -288,8 +288,8 @@ def get_prms_restart_env(env_vars):
         "PRMS_INPUT_DIR": f"{project_root}/daily/input",
         "PRMS_OUTPUT_DIR": f"{project_root}/daily/output"
     }
-    print("PRMS RESTART RUN ENV: \n")
-    pprint(prms_restart_env)
+    logger.debug("PRMS RUN ENV:\n%s", pformat(prms_restart_env))
+    
     return prms_restart_env
 
 
@@ -311,7 +311,7 @@ def _getxml(url):
         data = xmltodict.parse(response.data)
         return data
     except Exception as e:  # Better error handling
-        print(f"Error: {e}")
+        logger.exception("Error fetching or parsing XML from %s", url)
         return None
 
 
