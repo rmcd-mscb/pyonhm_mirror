@@ -3,7 +3,7 @@
 # This image contains PRMS.
 FROM nhmusgs/base
 
-LABEL maintainer="ashalper@usgs.gov"
+LABEL maintainer="rmcd@usgs.gov"
 
 # ## PRMS Version Numberdock
 #

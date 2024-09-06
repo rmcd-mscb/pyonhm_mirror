@@ -52,6 +52,22 @@
             "cwd": "${workspaceFolder}" // Sets the current working directory
         },
         {
+            "name": "Python Debugger: run operational w override",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/pyonhm/docker_manager.py",
+            "console": "integratedTerminal",
+            "args": [
+                // "pyonhm",
+                "run-operational",
+                "--env-file",
+                "nhm_uc.env",
+                "--override",
+            ],
+            "envFile": "${workspaceFolder}/nhm_uc.env", // Adjust if your env file is located elsewhere
+            "cwd": "${workspaceFolder}" // Sets the current working directory
+        },
+        {
             "name": "Python Debugger: run operational test",
             "type": "debugpy",
             "request": "launch",

@@ -144,7 +144,8 @@ def get_ncf2cbh_opvars(env_vars: dict, mode: str, ensemble: int = 0):
     if mode == "ensemble":
         tvars = {
             "NCF2CBH_IDIR": env_vars.get("CFSV2_NCF_ENSEMBLE_IDIR"),
-            "NCF2CBH_PREFIX": env_vars.get("OP_NCF_PREFIX"),
+            # "NCF2CBH_PREFIX": env_vars.get("OP_NCF_PREFIX"),
+            "NCF2CBH_PREFIX": "converted_filled",
             "NCF2CBH_START_DATE": env_vars.get("START_DATE"),
             "NCF2CBH_ROOT_DIR": env_vars.get("PROJECT_ROOT"),
             "NCF2CBH_MODE": "ensemble"
@@ -153,7 +154,8 @@ def get_ncf2cbh_opvars(env_vars: dict, mode: str, ensemble: int = 0):
         start_date = env_vars.get("FRCST_START_DATE")
         tvars = {
             "NCF2CBH_IDIR": env_vars.get("CFSV2_NCF_ENSEMBLE_MED_IDIR") + start_date + "/",
-            "NCF2CBH_PREFIX": env_vars.get("CFSV2_NCF_MEDIAN_PREFIX"),
+            # "NCF2CBH_PREFIX": env_vars.get("CFSV2_NCF_MEDIAN_PREFIX"),
+            "NCF2CBH_PREFIX": "converted_filled",
             "NCF2CBH_START_DATE": env_vars.get("FRCST_START_DATE"),
             "NCF2CBH_ROOT_DIR": env_vars.get("PROJECT_ROOT"),
             "NCF2CBH_ENS_NUM": 0,
@@ -163,7 +165,8 @@ def get_ncf2cbh_opvars(env_vars: dict, mode: str, ensemble: int = 0):
     elif mode == "op":
         tvars = {
             "NCF2CBH_IDIR": env_vars.get("OP_NCF_IDIR"),
-            "NCF2CBH_PREFIX": env_vars.get("OP_NCF_PREFIX"),
+            # "NCF2CBH_PREFIX": env_vars.get("OP_NCF_PREFIX"),
+            "NCF2CBH_PREFIX": "converted_filled",
             "NCF2CBH_START_DATE": env_vars.get("START_DATE"),
             "NCF2CBH_ROOT_DIR": env_vars.get("PROJECT_ROOT"),
             "NCF2CBH_ENS_NUM": 0,
@@ -382,10 +385,16 @@ def is_next_day_present(date_folders: list[str], user_date: str) -> Tuple[bool, 
     return (is_present, next_day_str if is_present else None)
 
 def check_consistency(status_list, date_list):
-    # Check if all status values are True and all dates are the same
-    if len(set(status_list)) == 1 and len(set(date_list)) == 1:
-        # Return consistent status and the consistent date string (since all dates are the same)
+    # Ensure the date_list is not empty
+    if not date_list:
+        logger.warning("Date list is empty. Cannot proceed with consistency check.")
+        return False, "", False
+
+    all_dates_consistent = len(set(date_list)) == 1
+    all_status_consistent = len(set(status_list)) == 1
+    if all_status_consistent == 1 and all_dates_consistent:
+        logger.info("Data is consistent with status: True and consistent dates.")
         return status_list[0], date_list[0]
     else:
-        # Return False and an empty string if conditions are not met
+        logger.warning(f"Data consistency check failed. Status: {status_list}, Dates: {date_list}")
         return False, ""

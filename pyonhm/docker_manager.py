@@ -29,7 +29,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-app = App(default_parameter=Parameter(negative=()))
+app = App(
+    default_parameter=Parameter(negative=()),
+    )
 g_build_load = Group.create_ordered(name="Admin Commands", help="Build images and load supporting data into volume")
 g_operational = Group.create_ordered(name="Operational Commands", help="NHM daily operational model methods")
 g_sub_seasonal = Group.create_ordered(name="Sub-seasonal Forecast Commands", help="NHM sub-seasonal forecasts model methods")
@@ -608,7 +610,7 @@ class DockerManager:
         logger.info("Downloading data...")
         self.download_fabric_data(env_vars=env_vars)
         self.download_model_data(env_vars=env_vars)
-        # self.download_model_test_data(env_vars=env_vars)
+        self.download_model_test_data(env_vars=env_vars)
 
     def print_env_vars(self, env_vars):
         """
@@ -742,22 +744,18 @@ class DockerManager:
             env_vars: dict,
             test: bool = False,
             num_days: int = 4,
+            override: bool = False  # Add override parameter
         ):
         """Execute operational tasks related to forecasting.
-
-        This function retrieves the latest restart date and updates environment variables based on whether the function
-        is in test mode. It manages the execution of operational containers and logs the process.
 
         Args:
             env_vars (dict): A dictionary of environment variables required for the operational run.
             test (bool): A flag indicating whether to run in test mode. Defaults to False.
             num_days (int): The number of days to consider for testing. Defaults to 4.
+            override (bool): If True, override gm_status == False if dates are consistent.
 
         Returns:
             None: This function does not return a value but logs the status of the operational tasks.
-
-        Raises:
-            Exception: If there is an error while retrieving the restart date or updating environment variables.
         """
         logger.info("Running operational tasks...")
         
@@ -773,7 +771,7 @@ class DockerManager:
                 utils.env_update_dates_for_testing(
                     restart_date=restart_date, env_vars=env_vars, num_days=num_days
                 )
-                logger.info("Environment dates updated for testing.")
+                logger.info(f"Environment dates updated for testing for {num_days} days.")
             except Exception as e:
                 logger.error(f"Failed to update environment dates for testing: {e}")
                 return
@@ -781,11 +779,14 @@ class DockerManager:
             try:
                 status_list, date_list = utils.gridmet_updated()
                 gm_status, end_date_str = utils.check_consistency(status_list, date_list)
-                if gm_status == False:
-                    logger.error("Gridmet not yet updated - Try again later.")
+                if gm_status == False and override:
+                    logger.info("Override active: Using consistent date despite gm_status being False.")
+                    gm_status = True  # Force gm_status to True to proceed
+                elif gm_status == False:
+                    logger.error("GridMet not yet updated - Try again later.")
                     return
                 utils.env_update_dates(restart_date=restart_date, end_date=end_date_str, env_vars=env_vars)
-                logger.info(f"Gridmet updated relative to yesterday: {gm_status}")
+                logger.info(f"GridMet updated relative to yesterday: {gm_status}")
             except Exception as e:
                 logger.error(f"Failed to update environment dates: {e}")
                 return
@@ -1041,19 +1042,26 @@ class DockerManager:
             logger.error("Failed to run the CFSv2 container.")
 
 @app.command(group=g_operational)
-def run_operational(env_file: str, num_days: int = 4, test: bool = False):
+def run_operational(
+    *,
+    env_file: str, 
+    test: bool = False, 
+    num_days: int = 4, 
+    override: bool = False
+) -> None:
     """Runs the operational simulation using the DockerManager.
 
     Args:
         env_file: The path to the environment file.
-        num_days: The number of days to run the simulation for. Defaults to 4.
         test: If True, runs the simulation in test mode. Defaults to False.
+        num_days: If test is True, then the number of days to run the simulation. Defaults to 4.
+        override: If True, override gm_status == False when dates are consistent. Defaults to False.
 
     Returns:
         None
     """
     docker_manager = DockerManager()
-    
+
     try:
         dict_env_vars = utils.load_env_file(env_file)
         logger.info(f"Environment variables loaded from '{env_file}'.")
@@ -1067,14 +1075,21 @@ def run_operational(env_file: str, num_days: int = 4, test: bool = False):
         logger.error("Failed to initialize Docker client.")
         return
 
+    # Log to inform the user about how num_days is used
+    if test:
+        logger.info(f"Running in test mode for {num_days} days.")
+    else:
+        logger.info("Running in normal mode. --num_days will be ignored.")
+
     try:
-        docker_manager.operational_run(env_vars=dict_env_vars, test=test, num_days=num_days)
+        docker_manager.operational_run(env_vars=dict_env_vars, test=test, num_days=num_days, override=override)
     except Exception as e:
         logger.error(f"An error occurred while running the operational simulation: {e}")
 
 
+
 @app.command(group=g_sub_seasonal)
-def run_sub_seasonal(env_file: str, method: str):
+def run_sub_seasonal(env_file: str, method: str) -> None:
     """
     Runs the sub-seasonal operational simulation using the DockerManager.
 

@@ -6,9 +6,10 @@
 #
 # The base image for the NHM base image is
 # [docker-miniconda](https://hub.docker.com/r/continuumio/miniconda3).
-FROM condaforge/mambaforge:23.3.1-1
+FROM condaforge/miniforge3:latest
 
-LABEL maintainer="rmcd@usgs.gov"
+LABEL maintainer_1="rmcd@usgs.gov" \
+      maintainer_2="ahalper@usgs.gov"
 
 # ## Additional Packages
 #
@@ -57,7 +58,7 @@ RUN apt-get update --fix-missing && \
 	    unzip \
         vim
 RUN apt-get autoclean && apt-get purge
-## Copy the certificate to the container
+## Copy the certificate to the contain (https://apps-int.usgs.gov/ssl/DOIRootCA2.cer)
 COPY DOIRootCA2.cer /usr/local/share/ca-certificates/DOIRootCA2.crt
 
 # Update CA certificates
@@ -76,17 +77,6 @@ RUN echo "SSL_CERT_FILE=${SSL_CERT_FILE}" && \
     echo "PIP_CERT=${PIP_CERT}" && \
     echo "GIT_SSL_CAINFO=${GIT_SSL_CAINFO}" && \
     echo "REQUESTS_CA_BUNDLE=${REQUESTS_CA_BUNDLE}"
-# # Add the DOI SSL Intercept Root Certificate
-# # RUN wget http://sslhelp.doi.net/docs/DOIRootCA2.cer -O /usr/local/share/ca-certificates/DOIRootCA2.crt && \
-# #     update-ca-certificates
-
-# # Set environment variables to use the custom certificate
-# # ENV SSL_CERT_FILE=/usr/local/share/ca-certificates/DOIRootCA2.crt
-# # ENV CURL_CA_BUNDLE=${SSL_CERT_FILE}
-# # ENV PIP_CERT=${SSL_CERT_FILE}
-# # ENV REQUESTS_CA_BUNDLE=${SSL_CERT_FILE}
-# # ENV GIT_SSL_CAINFO=${SSL_CERT_FILE}
-# # RUN mamba config --set ssl_verify /usr/local/share/ca-certificates/DOIRootCA2.crt
 
 # # ## Conda Installation
 # #
@@ -95,8 +85,8 @@ RUN echo "SSL_CERT_FILE=${SSL_CERT_FILE}" && \
 # # ### Additional Conda Packages
 # #
 # # Additional specific versions of Conda packages are required for
-# # Python support in the gridmet, gridmetetl, gridmets2s, ncf2cbh,
-# # cbhfiller, out2ncf, and verifier images.
+# # Python support in the gridmetetl, cfsv2etl, ncf2cbh,
+# # and out2ncf images.
 # # Combining mamba install and pip install in a single RUN command
 RUN mamba update -n base mamba -y && \
     mamba install -n base -c conda-forge -y \
@@ -116,7 +106,6 @@ RUN mamba update -n base mamba -y && \
         pint-xarray && \
     mamba clean -a && \
     /bin/bash -c "source activate base"
-#     # && pip --trusted-host pypi.org --trusted-host files.pythonhosted.org install -vvv git+https://code.chs.usgs.gov/wma/nhm/gridmetetl.git@check2
 
 # # ## Source Code Location
 # #
@@ -124,41 +113,19 @@ RUN mamba update -n base mamba -y && \
 # # image's `NHM_SOURCE_DIR` environment variable.
 ENV NHM_SOURCE_DIR=/usr/local/src
 
-# # ## ONHM Runners Version
-# #
-# # The version of the ONHM Runners source referenced by the ncf2cbh,
-# # cbhfiller, and out2ncf images can be declared by setting
-# # the `VERSION_ONHM_RUNNERS` argument in the base image.
-# # ARG VERSION_ONHM_RUNNERS=0.2.5
-# # ARG VERSION_ONHM_RUNNERS=main
-# # RUN git -c advice.detachedHead=false clone \
-# #     https://code.chs.usgs.gov/wma/nhm/onhm-runners.git \
-# #     --branch $VERSION_ONHM_RUNNERS --depth=1 $NHM_SOURCE_DIR/onhm-runners && \
-# #     cd $NHM_SOURCE_DIR/onhm-runners && \
-# #     rm -rf .git && \
-# #     rm .gitignore README.md .project .pydevproject
-
-# RUN pip --trusted-host pypi.org --trusted-host files.pythonhosted.org install -vvv git+https://code.chs.usgs.gov/wma/nhm/gridmetetl.git@check2
-# # Install the package from GitHub using a personal access token
-# ARG GITHUB_TOKEN
-# # Ensure git config is set to trust the certificate path
-# RUN git config --global http.sslCAInfo ${GIT_SSL_CAINFO}
-# # RUN pip  install -v git+https://github.com/rmcd-mscb/gridmet-etl.git
+# Install gridmet-etl into conda base environment for use with climage ETL processes.
 RUN pip install -vvv --trusted-host pypi.org --trusted-host files.pythonhosted.org git+https://github.com/rmcd-mscb/gridmet-etl.git
 
-# # ## gridmetetl Output Directory
+# # ## gridmetetl Directory to store geospatial fabric and create /nhm directory
 #
 # The gridmetetl output directory is `/nhm/gridmetetl/Output`.
-RUN mkdir -p /nhm/gridmetetl/Output
-
+RUN mkdir -p /nhm/gridmetetl
 # ## NHM User Account
 #
 # The NHM user account can be set by the `USER` environment variable
 # in the base image.
 ENV USER=nhm
 RUN useradd -ms /bin/bash $USER
-# RUN chown -R $USER /nhm
-# RUN chgrp -R $USER /nhm
 RUN chown -R nhm:nhm /nhm
 RUN chmod -R 755 /nhm
 ENV HOMEDIR=/home/$USER
@@ -166,6 +133,5 @@ ENV HOMEDIR=/home/$USER
 # ## Shared Volume
 #
 # Pipeline I/O occurs on the `/nhm` shared volume. `/nhm/` is mounted
-# on all containers except the gridmet container (which only queries
-# the gridMET server, and does not require persistent storage).
+# on all containers.
 VOLUME ["/nhm"]

@@ -3,7 +3,7 @@
 # This image contains the ncf2cbh program.
 FROM nhmusgs/base
 
-LABEL maintainer="ashalper@usgs.gov"
+LABEL maintainer="rmcd@usgs.gov"
 
 # Copy python script into image
 COPY --chown=nhm ncf2cbh_gfv11_embedded.py /opt/conda/bin
