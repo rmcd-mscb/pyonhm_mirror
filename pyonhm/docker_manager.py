@@ -39,7 +39,7 @@ g_seasonal = Group.create_ordered(name="Seasonal Forecast Commands", help="NHM s
 
 def validate_forecast(type_, value: str):
     valid_forecasts = ["median", "ensemble"]
-    if value not in validate_forecast:
+    if value not in valid_forecasts:
         raise  ValueError(f"Invalid --forecast-type: {value}. Expected one of {valid_forecasts}")
 
 def validate_method(type_, value: str):
@@ -1089,7 +1089,7 @@ def run_operational(
 
 
 @app.command(group=g_sub_seasonal)
-def run_sub_seasonal(env_file: str, method: str) -> None:
+def run_sub_seasonal(*, env_file: str, method: str) -> None:
     """
     Runs the sub-seasonal operational simulation using the DockerManager.
 
@@ -1135,7 +1135,7 @@ def run_list_available_forecasts(
         print("Failed to initialize Docker client.")
 
 @app.command(group=g_sub_seasonal)
-def run_update_cfsv2_data(env_file: str, method: str):
+def run_update_cfsv2_data(*, env_file: str, method: str):
     """
     Runs the update of CFSv2 data using the specified method , either 'ensemble' or 'median'.
 
@@ -1159,7 +1159,7 @@ def run_update_cfsv2_data(env_file: str, method: str):
     docker_manager.update_cfsv2(env_vars=dict_env_vars, method=method)
 
 @app.command(group=g_seasonal)
-def run_seasonal(env_file: str, num_days: int=4, test:bool=False):
+def run_seasonal(*, env_file: str, num_days: int=4, test:bool=False):
     """
     Runs the seasonal operational simulation using the DockerManager.
 
@@ -1182,7 +1182,7 @@ def run_seasonal(env_file: str, num_days: int=4, test:bool=False):
     print("TODO")
 
 @app.command(group=g_build_load)
-def build_images(no_cache: bool=False):
+def build_images(*, no_cache: bool=False):
     """
     Builds Docker images using the DockerManager.
 
@@ -1201,7 +1201,7 @@ def build_images(no_cache: bool=False):
     docker_manager.build_images(no_cache=no_cache)
 
 @app.command(group=g_build_load)
-def update_operational_restart(env_file: str):
+def update_operational_restart(*, env_file: str):
     """
     Updates the operational restart using the provided environment file.
 
@@ -1220,7 +1220,7 @@ def update_operational_restart(env_file: str):
     docker_manager.update_operational_restart(env_vars=dict_env_vars)
 
 @app.command(group=g_build_load)
-def load_data(env_file: str):
+def load_data(*, env_file: str):
     """
     Loads data using the DockerManager.
 
@@ -1239,7 +1239,7 @@ def load_data(env_file: str):
     docker_manager.load_data(env_vars=dict_env_vars)
 
 @app.command(group=g_operational)
-def fetch_op_results(env_file: str):
+def fetch_op_results(*, env_file: str):
     """
     Fetches operational results using the DockerManager.
 
