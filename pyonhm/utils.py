@@ -1,3 +1,4 @@
+import logging
 import os
 import pprint
 import re
@@ -7,7 +8,11 @@ import xmltodict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from pprint import pprint
+from pprint import pformat
 import pytz
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 def adjust_date_str(date_str, days):
@@ -139,7 +144,8 @@ def get_ncf2cbh_opvars(env_vars: dict, mode: str, ensemble: int = 0):
     if mode == "ensemble":
         tvars = {
             "NCF2CBH_IDIR": env_vars.get("CFSV2_NCF_ENSEMBLE_IDIR"),
-            "NCF2CBH_PREFIX": env_vars.get("OP_NCF_PREFIX"),
+            # "NCF2CBH_PREFIX": env_vars.get("OP_NCF_PREFIX"),
+            "NCF2CBH_PREFIX": "converted_filled",
             "NCF2CBH_START_DATE": env_vars.get("START_DATE"),
             "NCF2CBH_ROOT_DIR": env_vars.get("PROJECT_ROOT"),
             "NCF2CBH_MODE": "ensemble"
@@ -148,7 +154,8 @@ def get_ncf2cbh_opvars(env_vars: dict, mode: str, ensemble: int = 0):
         start_date = env_vars.get("FRCST_START_DATE")
         tvars = {
             "NCF2CBH_IDIR": env_vars.get("CFSV2_NCF_ENSEMBLE_MED_IDIR") + start_date + "/",
-            "NCF2CBH_PREFIX": env_vars.get("CFSV2_NCF_MEDIAN_PREFIX"),
+            # "NCF2CBH_PREFIX": env_vars.get("CFSV2_NCF_MEDIAN_PREFIX"),
+            "NCF2CBH_PREFIX": "converted_filled",
             "NCF2CBH_START_DATE": env_vars.get("FRCST_START_DATE"),
             "NCF2CBH_ROOT_DIR": env_vars.get("PROJECT_ROOT"),
             "NCF2CBH_ENS_NUM": 0,
@@ -158,7 +165,8 @@ def get_ncf2cbh_opvars(env_vars: dict, mode: str, ensemble: int = 0):
     elif mode == "op":
         tvars = {
             "NCF2CBH_IDIR": env_vars.get("OP_NCF_IDIR"),
-            "NCF2CBH_PREFIX": env_vars.get("OP_NCF_PREFIX"),
+            # "NCF2CBH_PREFIX": env_vars.get("OP_NCF_PREFIX"),
+            "NCF2CBH_PREFIX": "converted_filled",
             "NCF2CBH_START_DATE": env_vars.get("START_DATE"),
             "NCF2CBH_ROOT_DIR": env_vars.get("PROJECT_ROOT"),
             "NCF2CBH_ENS_NUM": 0,
@@ -210,25 +218,19 @@ def get_forecast_median_prms_run_env(env_vars, restart_date):
         "PRMS_INPUT_DIR": f"{project_root}/forecast/input/ensemble_median/{start_date_string}",
         "PRMS_OUTPUT_DIR": f"{project_root}/forecast/output/ensemble_median/{start_date_string}"
     }
-    print("PRMS RUN ENV: \n")
-    pprint(prms_env)
+    logger.debug("PRMS RUN ENV:\n%s", pformat(prms_env))
+    
     return prms_env
 
 def get_prms_run_env(env_vars, restart_date):
-    # Convert START_DATE string to datetime object
     start_date = datetime.strptime(env_vars.get("START_DATE"), "%Y-%m-%d")
-    # Format START_DATE as needed
     start_time = start_date.strftime("%Y,%m,%d,00,00,00")
     env_vars["START_TIME"] = start_time
 
-    # Convert END_DATE string to datetime object
     end_date = datetime.strptime(env_vars.get("END_DATE"), "%Y-%m-%d")
-    # Format END_DATE as needed
     end_time = end_date.strftime("%Y,%m,%d,00,00,00")
     end_date_string = env_vars.get("END_DATE")
     project_root = env_vars.get("PROJECT_ROOT")
-    op_dir = env_vars.get("OP_DIR")
-    frcst_dir = env_vars.get("FRCST_DIR")
 
     prms_env = {
         "OP_DIR": project_root,
@@ -245,8 +247,10 @@ def get_prms_run_env(env_vars, restart_date):
         "PRMS_INPUT_DIR": f"{project_root}/daily/input",
         "PRMS_OUTPUT_DIR": f"{project_root}/daily/output"
     }
-    print("PRMS RUN ENV: \n")
-    pprint(prms_env)
+    
+    # Use pprint to format the dictionary for logging
+    logger.debug("PRMS RUN ENV:\n%s", pformat(prms_env))
+    
     return prms_env
 
 
@@ -287,8 +291,8 @@ def get_prms_restart_env(env_vars):
         "PRMS_INPUT_DIR": f"{project_root}/daily/input",
         "PRMS_OUTPUT_DIR": f"{project_root}/daily/output"
     }
-    print("PRMS RESTART RUN ENV: \n")
-    pprint(prms_restart_env)
+    logger.debug("PRMS RUN ENV:\n%s", pformat(prms_restart_env))
+    
     return prms_restart_env
 
 
@@ -310,7 +314,7 @@ def _getxml(url):
         data = xmltodict.parse(response.data)
         return data
     except Exception as e:  # Better error handling
-        print(f"Error: {e}")
+        logger.exception("Error fetching or parsing XML from %s", url)
         return None
 
 
@@ -327,13 +331,11 @@ def gridmet_updated() -> bool:
     ]
     urlsuffix = "dataset.xml"
 
-    # Timezone-aware datetime objects
     tz = pytz.timezone("America/Denver")  # Replace with your timezone
     nowutc = datetime.now(pytz.utc)
     now = nowutc.astimezone(tz)
     yesterday = (now - timedelta(days=1)).date()
 
-    # Initialize the result lists
     status_list = []
     date_list = []
 
@@ -342,18 +344,17 @@ def gridmet_updated() -> bool:
         if xml_data := _getxml(masterURL):
             datadef = xml_data["gridDataset"]["TimeSpan"]["end"]
             gm_date = datetime.strptime(datadef[:10], "%Y-%m-%d").date()
-            # Append status and date to the lists
             status_list.append(gm_date == yesterday)
             date_list.append(gm_date.strftime("%Y-%m-%d"))
         else:
-            print(f"Failed to fetch or parse data for {data}")
+            logger.error(f"Failed to fetch or parse data for {data}")
             status_list.append(False)
             date_list.append("")
 
-    # Optionally print the lists (can be removed or adjusted per your requirements)
-    print("Status of data availability (True = not from yesterday):", status_list)
-    print("Dates of the datasets:", date_list)
+    logger.info("Status of data availability (False = not from yesterday): %s", status_list)
+    logger.info("Dates of the datasets: %s", date_list)
     return status_list, date_list
+
 
 
 def is_next_day_present(date_folders: list[str], user_date: str) -> Tuple[bool, str]:
@@ -384,10 +385,16 @@ def is_next_day_present(date_folders: list[str], user_date: str) -> Tuple[bool, 
     return (is_present, next_day_str if is_present else None)
 
 def check_consistency(status_list, date_list):
-    # Check if all status values are True and all dates are the same
-    if len(set(status_list)) == 1 and len(set(date_list)) == 1:
-        # Return consistent status and the consistent date string (since all dates are the same)
+    # Ensure the date_list is not empty
+    if not date_list:
+        logger.warning("Date list is empty. Cannot proceed with consistency check.")
+        return False, "", False
+
+    all_dates_consistent = len(set(date_list)) == 1
+    all_status_consistent = len(set(status_list)) == 1
+    if all_status_consistent == 1 and all_dates_consistent:
+        logger.info("Data is consistent with status: True and consistent dates.")
         return status_list[0], date_list[0]
     else:
-        # Return False and an empty string if conditions are not met
+        logger.warning(f"Data consistency check failed. Status: {status_list}, Dates: {date_list}")
         return False, ""

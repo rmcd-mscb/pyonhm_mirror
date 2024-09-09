@@ -2,12 +2,11 @@
 #
 # U.S. Geological Survey
 #
-# File - ofp
+# File - run_gridmetetl
 #
 # Purpose - Docker entry-point for NHM gridmetetl container.
 #
-# Authors - Ivan Suftin, Richard McDonald, Steven Markstrom,
-#           Andrew Halper
+# Authors - Richard McDonald
 #
 
 echo "NHM_SOURCE_DIR is $NHM_SOURCE_DIR"

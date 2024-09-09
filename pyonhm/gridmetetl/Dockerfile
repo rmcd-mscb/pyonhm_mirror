@@ -3,7 +3,7 @@
 # This image contains the gridmetetl program.
 FROM nhmusgs/base
 
-LABEL maintainer="ashalper@usgs.gov"
+LABEL maintainer="rmcd@usgs.gov"
 
 # ## gridmetetl Installation Location
 #
@@ -14,7 +14,7 @@ RUN chmod 744 /usr/local/bin/run_gridmetetl
 # ## gridmetetl User Account
 #
 # The gridmetetl user account is defined in the [base image
-# Dockerfile](https://code.chs.usgs.gov/wma/nhm/docker-images/-/blob/main/base/Dockerfile).
+# Dockerfile].
 USER $USER
 WORKDIR /home/$USER
 
