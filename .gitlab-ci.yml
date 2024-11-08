@@ -3,7 +3,7 @@ stages:
 docker_test:
   stage: test
   tags:
-    - linux
+    - shell
     - docker
     - mamba
   script:
