@@ -1,6 +1,5 @@
 stages:
   - test
-
 docker_test:
   stage: test
   tags:
