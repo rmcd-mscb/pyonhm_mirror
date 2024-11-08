@@ -5,7 +5,8 @@ docker_test:
   tags:
     - shell
     - docker
-    - mamba
+    - conda
+    - pyonhm
   script:
     - echo "Testing Docker with 'docker run hello-world'"
     - docker run hello-world
