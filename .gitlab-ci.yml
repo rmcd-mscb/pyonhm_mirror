@@ -1,0 +1,13 @@
+stages:
+  - test
+
+docker_test:
+  stage: test
+  tags:
+    - shell
+    - docker
+  script:
+    - echo "Testing Docker with 'docker run hello-world'"
+    - docker run hello-world
+  only:
+    - branches
