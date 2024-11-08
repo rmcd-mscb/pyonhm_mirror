@@ -4,8 +4,9 @@ stages:
 docker_test:
   stage: test
   tags:
-    - shell
+    - linux
     - docker
+    - mamba
   script:
     - echo "Testing Docker with 'docker run hello-world'"
     - docker run hello-world
