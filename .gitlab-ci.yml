@@ -39,20 +39,18 @@ update_cfsv2_data:
     # # Activate the conda environment
     - conda activate "$CONDA_ENV_NAME"
 
-    # # Define the log file with the date string
-    # - LOGFILE="$LOG_DIR/pyonhm_cfsv2_cron_$(date '+%Y%m%d').log"
-
-    # # Create log directory if it doesn't exist
-    # - mkdir -p "$LOG_DIR"
-
-    # # Redirect all output to the log file
-    # - exec >> "$LOGFILE" 2>&1
-
     # Run update CFSv2 median forecast
     - pyonhm run-update-cfsv2-data --env-file "$ENV_FILE_PATH" --method median
 
     # Run update CFSv2 ensembles forecast
-    # - pyonhm run-update-cfsv2-data --env-file "$ENV_FILE_PATH" --method ensemble
+    - pyonhm run-update-cfsv2-data --env-file "$ENV_FILE_PATH" --method ensemble
+
+    # Run operational model
+    - pyonhm run-operational --env-file "$ENV_FILE_PATH"
+
+    # forecasts 
+    - pyonhm run-sub-seasonal --env-file "$ENV_FILE_PATH" --method median
+    - pyonhm run-sub-seasonal --env-file "$ENV_FILE_PATH" --method ensemble
 
     # Deactivate the conda environment
     - conda deactivate
@@ -62,6 +60,6 @@ update_cfsv2_data:
   #     - "$LOG_DIR/pyonhm_cfsv2_cron_$(date '+%Y%m%d').log"
   #   expire_in: 1 week
 
-  # only:
-  #   - schedules
+  only:
+    - schedules
 
