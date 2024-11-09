@@ -9,7 +9,7 @@ variables:
   LOG_DIR: "$HOME/pyonhm_logs"
 
 update_cfsv2_data:
-  stage: update-cfsv2-data
+  stage: run-operational
   tags:
     - shell
     - docker
