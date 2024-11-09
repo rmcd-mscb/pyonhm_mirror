@@ -1,5 +1,5 @@
 stages:
-  - update-cfsv2-data
+  - run-operational
 
 variables:
   HOME: "/home/gitlab-runner"
@@ -16,7 +16,7 @@ update_cfsv2_data:
     - conda
     - pyonhm
   script:
-    - echo "Starting the update_cfsv2_data job"
+    - echo "Starting the run-operational job"
 
     # # Ensure HOME is set (GitLab CI sets it, but we reinforce it)
     # - export HOME="${HOME:-/home/$(whoami)}"
