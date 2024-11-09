@@ -52,7 +52,7 @@ update_cfsv2_data:
     - pyonhm run-update-cfsv2-data --env-file "$ENV_FILE_PATH" --method median
 
     # Run update CFSv2 ensembles forecast
-    - pyonhm run-update-cfsv2-data --env-file "$ENV_FILE_PATH" --method ensemble
+    # - pyonhm run-update-cfsv2-data --env-file "$ENV_FILE_PATH" --method ensemble
 
     # Deactivate the conda environment
     - conda deactivate
