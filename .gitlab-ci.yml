@@ -5,7 +5,7 @@ variables:
   HOME: "/home/gitlab-runner"
   CONDA_HOME: "$HOME/miniforge3"  # Adjust if Miniforge3 is installed elsewhere
   CONDA_ENV_NAME: "pyonhm"
-  ENV_FILE_PATH: "$CI_PROJECT_DIR/nhm_uc.env"  # Assuming nhm_uc.env is in the repo
+  ENV_FILE_PATH: "$CI_PROJECT_DIR/nhm_conus.env"  # Assuming nhm_uc.env is in the repo
   LOG_DIR: "$HOME/pyonhm_logs"
 
 update_cfsv2_data:
