@@ -62,6 +62,6 @@ update_cfsv2_data:
       - "$LOG_DIR/pyonhm_cfsv2_cron_$(date '+%Y%m%d').log"
     expire_in: 1 week
 
-  only:
-    - schedules
+  # only:
+  #   - schedules
 
