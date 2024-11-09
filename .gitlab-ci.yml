@@ -18,35 +18,35 @@ update_cfsv2_data:
   script:
     - echo "Starting the update_cfsv2_data job"
 
-    # Ensure HOME is set (GitLab CI sets it, but we reinforce it)
-    - export HOME="${HOME:-/home/$(whoami)}"
+    # # Ensure HOME is set (GitLab CI sets it, but we reinforce it)
+    # - export HOME="${HOME:-/home/$(whoami)}"
 
-    # Add Miniforge3 to PATH
-    - export PATH="$CONDA_HOME/bin:$PATH"
+    # # Add Miniforge3 to PATH
+    # - export PATH="$CONDA_HOME/bin:$PATH"
 
-    # Attempt to locate conda.sh dynamically
-    - CONDA_BASE=$(conda info --base 2>/dev/null)
-    - |
-      if [ -n "$CONDA_BASE" ] && [ -f "$CONDA_BASE/etc/profile.d/conda.sh" ]; then
-          source "$CONDA_BASE/etc/profile.d/conda.sh"
-      elif [ -f "$CONDA_HOME/etc/profile.d/conda.sh" ]; then
-          source "$CONDA_HOME/etc/profile.d/conda.sh"
-      else
-          echo "Conda initialization script not found."
-          exit 1
-      fi
+    # # Attempt to locate conda.sh dynamically
+    # - CONDA_BASE=$(conda info --base 2>/dev/null)
+    # - |
+    #   if [ -n "$CONDA_BASE" ] && [ -f "$CONDA_BASE/etc/profile.d/conda.sh" ]; then
+    #       source "$CONDA_BASE/etc/profile.d/conda.sh"
+    #   elif [ -f "$CONDA_HOME/etc/profile.d/conda.sh" ]; then
+    #       source "$CONDA_HOME/etc/profile.d/conda.sh"
+    #   else
+    #       echo "Conda initialization script not found."
+    #       exit 1
+    #   fi
 
-    # Activate the conda environment
-    - conda activate "$CONDA_ENV_NAME"
+    # # Activate the conda environment
+    # - conda activate "$CONDA_ENV_NAME"
 
-    # Define the log file with the date string
-    - LOGFILE="$LOG_DIR/pyonhm_cfsv2_cron_$(date '+%Y%m%d').log"
+    # # Define the log file with the date string
+    # - LOGFILE="$LOG_DIR/pyonhm_cfsv2_cron_$(date '+%Y%m%d').log"
 
-    # Create log directory if it doesn't exist
-    - mkdir -p "$LOG_DIR"
+    # # Create log directory if it doesn't exist
+    # - mkdir -p "$LOG_DIR"
 
-    # Redirect all output to the log file
-    - exec >> "$LOGFILE" 2>&1
+    # # Redirect all output to the log file
+    # - exec >> "$LOGFILE" 2>&1
 
     # Run update CFSv2 median forecast
     - pyonhm run-update-cfsv2-data --env-file "$ENV_FILE_PATH" --method median
@@ -57,10 +57,10 @@ update_cfsv2_data:
     # Deactivate the conda environment
     - conda deactivate
 
-  artifacts:
-    paths:
-      - "$LOG_DIR/pyonhm_cfsv2_cron_$(date '+%Y%m%d').log"
-    expire_in: 1 week
+  # artifacts:
+  #   paths:
+  #     - "$LOG_DIR/pyonhm_cfsv2_cron_$(date '+%Y%m%d').log"
+  #   expire_in: 1 week
 
   # only:
   #   - schedules
