@@ -37,7 +37,7 @@ update_cfsv2_data:
     #   fi
 
     # # Activate the conda environment
-    # - conda activate "$CONDA_ENV_NAME"
+    - conda activate "$CONDA_ENV_NAME"
 
     # # Define the log file with the date string
     # - LOGFILE="$LOG_DIR/pyonhm_cfsv2_cron_$(date '+%Y%m%d').log"
