@@ -1,0 +1,60 @@
+services:
+  base:
+    build:
+      context: ./pyonhm/base
+      dockerfile: Dockerfile
+    image: nhmusgs_base
+    volumes:
+      - type: bind
+        source: ${NHM_BIND_PATH}
+        target: /nhm
+    tty: true
+    command: sleep infinity
+
+  gridmetetl:
+    build:
+      context: ./pyonhm/gridmetetl
+    image: nhmusgs/gridmetetl:0.30
+    volumes:
+      - type: bind
+        source: ${NHM_BIND_PATH}
+        target: /nhm
+
+  ncf2cbh:
+    build:
+      context: ./pyonhm/ncf2cbh
+    image: nhmusgs/ncf2cbh
+    volumes:
+      - type: bind
+        source: ${NHM_BIND_PATH}
+        target: /nhm
+
+  prms:
+    build:
+      context: ./pyonhm/prms
+    image: nhmusgs/prms:5.2.1
+    volumes:
+      - type: bind
+        source: ${NHM_BIND_PATH}
+        target: /nhm
+
+  out2ncf:
+    build:
+      context: ./pyonhm/out2ncf
+    image: nhmusgs/out2ncf
+    volumes:
+      - type: bind
+        source: ${NHM_BIND_PATH}
+        target: /nhm
+
+  cfsv2etl:
+    build:
+      context: ./pyonhm/cfsv2etl
+    image: nhmusgs/cfsv2etl
+    volumes:
+      - type: bind
+        source: ${NHM_BIND_PATH}
+        target: /nhm
+
+volumes:
+  nhm_data:

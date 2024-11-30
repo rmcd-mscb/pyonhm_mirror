@@ -1,4 +1,5 @@
 import logging
+import logging.config
 import os
 import pprint
 import re
@@ -46,7 +47,7 @@ def setup_logging(default_path='logging.yaml', default_level=logging.INFO, env_k
             logging.error(f"Error parsing YAML configuration file: {e}")
             logging.basicConfig(level=default_level)
         except Exception as e:
-            logging.error(f"Error loading logging configuration: {e}")
+            logging.exception(f"Error loading logging configuration: {e}")
             logging.basicConfig(level=default_level)
     else:
         logging.basicConfig(level=default_level)

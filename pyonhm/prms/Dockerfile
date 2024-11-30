@@ -1,7 +1,7 @@
 # # NHM PRMS Image
 #
 # This image contains PRMS.
-FROM nhmusgs/base
+FROM nhmusgs_base
 
 LABEL maintainer="rmcd@usgs.gov"
 

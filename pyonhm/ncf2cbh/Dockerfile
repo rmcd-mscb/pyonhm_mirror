@@ -1,7 +1,7 @@
 # NHM ncf2cbh Image
 #
 # This image contains the ncf2cbh program.
-FROM nhmusgs/base
+FROM nhmusgs_base
 
 LABEL maintainer="rmcd@usgs.gov"
 

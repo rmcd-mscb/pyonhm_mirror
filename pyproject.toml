@@ -13,11 +13,11 @@ python = ">=3.11,<3.12"
 gdptools = "0.2.12"
 pytz = "^2024.1"
 xmltodict = "^0.13.0"
-cyclopts = "^2.4.2"
+cyclopts = "^3"
 docker = "^7.0.0"
 
 [tool.poetry.scripts]
-pyonhm = "pyonhm.docker_manager:main"
+pyonhm = "pyonhm.docker_compose_manager:main"
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.4"
