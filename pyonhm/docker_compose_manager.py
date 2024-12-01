@@ -1,4 +1,5 @@
 from cyclopts import App, Group, Parameter
+from pathlib import Path
 from pyonhm import utils
 import subprocess
 import logging
@@ -361,11 +362,25 @@ class DockerComposeManager:
             logger.error(f"An error occurred during container operations: {e}")
             sys.exit(1)
 
-    def print_env_vars(self, env_vars):
+    def print_env_vars(self, env_vars: dict):
         """Print environment variables for debugging purposes."""
         logger.debug("Environment Variables:")
         for key, value in env_vars.items():
             logger.debug(f"{key}={value}")
+
+    def print_forecast_env_vars(self, env_vars: dict):
+        """
+        Print selected environment variables.
+        """
+        print_keys = [
+            "FRCST_START_DATE",
+            "FRCST_END_DATE",
+            "FRCST_START_TIME",
+            "FRCST_END_TIME"
+        ]
+        for key, value in env_vars.items():
+            if key in print_keys:
+                logger.info(f"{key}: {value}")
 
     def update_cfsv2(self, env_vars: dict, method: str) -> None:
         """Update the CFSv2 environment by running a Docker container.
@@ -401,6 +416,154 @@ class DockerComposeManager:
         except Exception as e:
             logger.error(f"An error occurred during container operations: {e}")
             sys.exit(1)
+
+    def list_date_folders(self, env_vars: dict, path: Path):
+            """
+            Generates a list of date folders from the specified path by listing directories matching the date pattern.
+
+            Args:
+                path (Path): The path to search for date folders.
+
+            Returns:
+                list: A list of date folders extracted from the specified path.
+            """
+
+            # Bash command to list directories matching the date pattern
+            command_override = [
+                'bash', '-c',
+                "find . -maxdepth 1 -type d -name '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]' -printf '%f\n'"
+            ]
+            logger.debug(f"Command override: {command_override}")
+
+            # Run the command using self.run_service
+            result = self.run_service(
+                service_name='base',
+                command_override=command_override,
+                env_vars=env_vars,
+                working_dir=str(path)
+            )
+            if result and result.returncode == 0:
+                output = result.stdout.strip()
+                return [line.strip() for line in output.split('\n') if line.strip()]
+            else:
+                raise RuntimeError("Failed to list date folders.")
+
+    def forecast_run(
+            self,
+            env_vars: dict,
+            method: str = "median"
+    ):
+        """Execute forecast tasks based on the specified method.
+
+        This function runs forecast tasks for either a median or ensemble method, checking for the latest restart date
+        and preparing the necessary environment. It manages the execution of Docker containers to process climate data
+        and logs the progress and results.
+
+        Args:
+            env_vars (dict): A dictionary of environment variables required for the forecast process.
+            method (str): The method to use for the forecast, either "median" or "ensemble". Defaults to "median".
+
+        Returns:
+            None: This function does not return a value but logs the status of the forecast tasks.
+
+        Raises:
+            ValueError: If the specified method is not "median" or "ensemble".
+        """
+        logger.info(f"Running tasks for {method} forecast...")
+        if method not in ["median", "ensemble"]:
+            raise ValueError(f"Invalid method '{method}'. Mode must be 'median' or 'ensemble'.")
+        
+        median_path = Path(env_vars.get("CFSV2_NCF_IDIR")) / "ensemble_median"
+        ensemble_path = Path(env_vars.get("CFSV2_NCF_IDIR")) / "ensembles"
+        logger.info("Running forecast tasks...")
+        
+        # Get the most recent operational run restart date.
+        forecast_restart_date = self.get_latest_restart_date(env_vars=env_vars, mode="forecast")
+        logger.info(f"Forecast restart date is {forecast_restart_date}")
+        
+        utils.env_update_forecast_dates(restart_date=forecast_restart_date, env_vars=env_vars)
+        self.print_forecast_env_vars(env_vars)
+
+        # Get a list of dates representing the available processed climate drivers
+        if method == "median":
+            forecast_input_dates = self.list_date_folders(env_vars=env_vars, path=median_path)
+        elif method == "ensemble":
+            forecast_input_dates = self.list_date_folders(env_vars=env_vars, path=ensemble_path)
+        
+        print(forecast_input_dates)
+        state, forecast_run_date = utils.is_next_day_present(forecast_input_dates, forecast_restart_date)
+        logger.info(f"{method} forecast ready: {state}, forecast start date: {forecast_run_date}")
+
+        if not state:
+            logger.error("The restart date is not suitable to run the forecast. Please use 'run-operational' to update the restart date.")
+            sys.exit(1)
+
+        if method == 'median':
+            med_vars = utils.get_ncf2cbh_opvars(env_vars=env_vars, mode=method)
+            try:
+                self.run_service(
+                    service_name='ncf2cbh',
+                    env_vars=med_vars
+                )
+            except Exception as e:
+                logger.error(f"An error occurred during container operations: {e}")
+                sys.exit(1)
+
+            prms_env = utils.get_forecast_median_prms_run_env(env_vars=env_vars, restart_date=forecast_restart_date)
+            try:
+                self.run_service(
+                    service_name='prms',
+                    env_vars=prms_env
+                )
+            except Exception as e:
+                logger.error(f"An error occurred during container operations: {e}")
+                sys.exit(1)
+
+            out2ncf_vars = utils.get_out2ncf_vars(env_vars=env_vars, mode="median")
+            try:
+                self.run_service(
+                    service_name='out2ncf',
+                    env_vars=out2ncf_vars
+                )
+            except Exception as e:
+                logger.error(f"An error occurred during container operations: {e}")
+                sys.exit(1)
+
+        elif method == "ensemble":
+            for idx in range(48):  #  Loop through 48 ensembles
+                logger.info(f"Running ensemble number: {idx}")
+                ens_vars = utils.get_ncf2cbh_opvars(env_vars=env_vars, mode=method, ensemble=idx)
+                try:
+                    self.run_service(
+                        service_name='ncf2cbh',
+                        env_vars=ens_vars
+                    )
+                except Exception as e:
+                    logger.error(f"An error occurred during container operations: {e}")
+                    sys.exit(1)
+
+                prms_env = utils.get_forecast_ensemble_prms_run_env(
+                    env_vars=env_vars,
+                    restart_date=forecast_restart_date,
+                    n=idx)
+                try:
+                    self.run_service(
+                        service_name='prms',
+                        env_vars=prms_env
+                    )
+                except Exception as e:
+                    logger.error(f"An error occurred during container operations: {e}")
+                    sys.exit(1)
+
+                out2ncf_vars = utils.get_out2ncf_vars(env_vars=env_vars, mode="ensemble", ensemble=idx)
+                try:
+                    self.run_service(
+                        service_name='out2ncf',
+                        env_vars=out2ncf_vars
+                    )
+                except Exception as e:
+                    logger.error(f"An error occurred during container operations: {e}")
+                    sys.exit(1)
 
 @app.command(group=g_build_load)
 def build_images(*, no_cache: bool=False):
@@ -508,6 +671,56 @@ def run_update_cfsv2_data(*, env_file: str, method: str):
         compose_manager.update_cfsv2(env_vars=dict_env_vars, method=method)
     except Exception as e:
         logger.error(f"An error occurred while running the operational simulation: {e}")
+
+@app.command(group=g_seasonal)
+def run_seasonal(*, env_file: str, num_days: int=4, test:bool=False):
+    """
+    Runs the seasonal operational simulation using the DockerManager.
+
+    Args:
+        env_file: The path to the environment file.
+        num_days: The number of days to run the simulation for. Defaults to 4.
+        test: If True, runs the simulation in test mode. Defaults to False.
+
+    Returns:
+        None
+    """
+    compose_manager = DockerComposeManager()
+
+    try:
+
+        dict_env_vars = utils.load_env_file(env_file)
+        logger.info(f"Environment variables loaded from '{env_file}'.")
+    except Exception as e:
+        logger.error(f"Failed to load environment file '{env_file}': {e}")
+        return
+    
+    print("TODO")
+
+@app.command(group=g_sub_seasonal)
+def run_sub_seasonal(*, env_file: str, method: str) -> None:
+    """
+    Runs the sub-seasonal operational simulation using the DockerManager.
+
+    Args:
+        env_file (str): The path to the environment file.
+        method (str): One of ["median"]["ensemble"]  
+
+    Returns:
+        None
+    """
+    compose_manager = DockerComposeManager()
+
+
+    try:
+
+        dict_env_vars = utils.load_env_file(env_file)
+        logger.info(f"Environment variables loaded from '{env_file}'.")
+    except Exception as e:
+        logger.error(f"Failed to load environment file '{env_file}': {e}")
+        return
+   
+    compose_manager.forecast_run(env_vars=dict_env_vars, method=method)
 
 def main():
     try:

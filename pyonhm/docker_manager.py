@@ -687,6 +687,10 @@ class DockerManager:
         state, forecast_run_date = utils.is_next_day_present(forecast_input_dates, forecast_restart_date)
         logger.info(f"{method} forecast ready: {state}, forecast start date: {forecast_run_date}")
 
+        if not state:
+            logger.error("The restart date is not suitable to run the forecast. Please use 'run-operational' to update the restart date.")
+            sys.exit(1)
+
         if method == 'median':
             med_vars = utils.get_ncf2cbh_opvars(env_vars=env_vars, mode=method)
             success = self.run_container(
