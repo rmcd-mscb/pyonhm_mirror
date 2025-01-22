@@ -174,6 +174,23 @@
             ],
             "envFile": "${workspaceFolder}/nhm_conus.env", // Adjust if your env file is located elsewhere
             "cwd": "${workspaceFolder}" // Sets the current working directory
-        }
+        },
+        {
+            "name": "Python Debugger: convert-to-zarr",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/pyonhm/docker_compose_manager.py",
+            "console": "integratedTerminal",
+            "args": [
+                // "pyonhm",
+                "conv-output-to-zarr",
+                "--env-file",
+                "nhm_uc.env",
+                "--method",
+                "ensemble"
+            ],
+            "envFile": "${workspaceFolder}/nhm_uc.env", // Adjust if your env file is located elsewhere
+            "cwd": "${workspaceFolder}" // Sets the current working directory
+        },
     ]
 }

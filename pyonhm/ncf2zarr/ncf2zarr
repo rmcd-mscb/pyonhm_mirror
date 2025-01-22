@@ -1,0 +1,20 @@
+#! /bin/bash
+#
+# U.S. Geological Survey
+#
+# File - ncf2zarr
+#
+# Purpose - Docker entry-point for ncf2zarr container.
+#
+# Authors - Richard McDonald, Steven Markstrom,
+#           Andrew Halper
+#
+
+echo "The output path is $OUT_WORK_PATH"
+echo "The project root path is $OUT_ROOT_PATH"
+
+/opt/conda/bin/python \
+  -u "/opt/conda/bin/ncf2zarr.py" \
+  "--output-path" "$OUT_WORK_PATH" \
+  "--mode" "$OUT_MODE"
+  

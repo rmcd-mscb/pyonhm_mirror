@@ -254,6 +254,43 @@ def get_out2ncf_vars(env_vars: dict, mode: str, ensemble: int = 0):
 
     return tvars
 
+def get_ncf2zarr_vars(env_vars: dict, mode: str, ensemble: int = 0):
+    project_root = Path(env_vars.get("PROJECT_ROOT"))
+    start_date_string = env_vars.get("FRCST_START_DATE")
+
+    if mode == "ensemble":
+        out_work_path = (
+            project_root
+            / "forecast"
+            / "output"
+            / "ensembles"
+            / start_date_string
+        )
+        tvars = {
+            "OUT_WORK_PATH": str(out_work_path),
+            "OUT_ROOT_PATH": str(project_root),
+            "OUT_MODE": str(mode)
+        }
+    elif mode == "median":
+        out_work_path = project_root / "forecast" / "output" / "ensemble_median" / start_date_string
+        tvars = {
+            "OUT_WORK_PATH": str(out_work_path),
+            "OUT_ROOT_PATH": str(project_root),
+            "OUT_MODE": str(mode)
+        }
+    elif mode == "op":
+        op_dir = Path(env_vars.get("OP_DIR"))
+        out_work_path = op_dir / "output"
+        tvars = {
+            "OUT_WORK_PATH": str(out_work_path),
+            "OUT_ROOT_PATH": str(project_root),
+            "OUT_MODE": str(mode)
+        }
+    else:
+        raise ValueError(f"Unsupported mode: {mode}")
+
+    return tvars
+
 def get_forecast_median_prms_run_env(env_vars, restart_date):
     start_date_string = env_vars.get("FRCST_START_DATE")
     project_root = Path(env_vars.get("PROJECT_ROOT"))

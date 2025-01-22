@@ -10,7 +10,7 @@ packages = [
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-gdptools = "0.2.12"
+gdptools = "0.2.16"
 pytz = "^2024.1"
 xmltodict = "^0.13.0"
 cyclopts = "^3"
@@ -22,6 +22,9 @@ pyonhm = "pyonhm.docker_compose_manager:main"
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.4"
 sciencebasepy = "^2.0.18"
+mkdocs = "^1.6.1"
+mkdocs-material = "^9.5.48"
+mkdocstrings = "^0.27.0"
 
 [build-system]
 requires = ["poetry-core"]

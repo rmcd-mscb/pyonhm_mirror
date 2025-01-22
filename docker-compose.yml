@@ -47,6 +47,15 @@ services:
         source: ${NHM_BIND_PATH}
         target: /nhm
 
+  ncf2zarr:
+    build:
+      context: ./pyonhm/ncf2zarr
+    image: nhmusgs/ncf2zarr
+    volumes:
+      - type: bind
+        source: ${NHM_BIND_PATH}
+        target: /nhm
+
   cfsv2etl:
     build:
       context: ./pyonhm/cfsv2etl
