@@ -53,7 +53,7 @@
             "name": "Python Debugger: update-operational-restart",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/pyonhm/docker_manager.py",
+            "program": "${workspaceFolder}/pyonhm/docker_compose_manager.py",
             "console": "integratedTerminal",
             "args": [
                 // "pyonhm",
@@ -68,7 +68,7 @@
             "name": "Python Debugger: run_update_cfsv2_data",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/pyonhm/docker_manager.py",
+            "program": "${workspaceFolder}/pyonhm/docker_compose_manager.py",
             "console": "integratedTerminal",
             "args": [
                 // "pyonhm",
@@ -85,7 +85,7 @@
             "name": "Python Debugger: run operational",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/pyonhm/docker_manager.py",
+            "program": "${workspaceFolder}/pyonhm/docker_compose_manager.py",
             "console": "integratedTerminal",
             "args": [
                 // "pyonhm",
@@ -100,7 +100,7 @@
             "name": "Python Debugger: run operational w override",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/pyonhm/docker_manager.py",
+            "program": "${workspaceFolder}/pyonhm/docker_compose_manager.py",
             "console": "integratedTerminal",
             "args": [
                 // "pyonhm",
@@ -116,7 +116,7 @@
             "name": "Python Debugger: run operational test",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/pyonhm/docker_manager.py",
+            "program": "${workspaceFolder}/pyonhm/docker_compose_manager.py",
             "console": "integratedTerminal",
             "args": [
                 // "pyonhm",
@@ -134,13 +134,13 @@
             "name": "Python Debugger: run-sub-seasonal",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/pyonhm/docker_manager.py",
+            "program": "${workspaceFolder}/pyonhm/docker_compose_manager.py",
             "console": "integratedTerminal",
             "args": [
                 // "pyonhm",
                 "run-sub-seasonal",
                 "--env-file",
-                "nhm_conus.env",
+                "nhm_uc.env",
                 "--method",
                 "median"
             ],
@@ -151,7 +151,7 @@
             "name": "Python Debugger: load_data",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/pyonhm/docker_manager.py",
+            "program": "${workspaceFolder}/pyonhm/docker_compose_manager.py",
             "console": "integratedTerminal",
             "args": [
                 // "pyonhm",
@@ -166,7 +166,7 @@
             "name": "Python Debugger: build images",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/pyonhm/docker_manager.py",
+            "program": "${workspaceFolder}/pyonhm/docker_compose_manager.py",
             "console": "integratedTerminal",
             "args": [
                 // "pyonhm",
@@ -174,6 +174,23 @@
             ],
             "envFile": "${workspaceFolder}/nhm_conus.env", // Adjust if your env file is located elsewhere
             "cwd": "${workspaceFolder}" // Sets the current working directory
-        }
+        },
+        {
+            "name": "Python Debugger: convert-to-zarr",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/pyonhm/docker_compose_manager.py",
+            "console": "integratedTerminal",
+            "args": [
+                // "pyonhm",
+                "conv-output-to-zarr",
+                "--env-file",
+                "nhm_uc.env",
+                "--method",
+                "ensemble"
+            ],
+            "envFile": "${workspaceFolder}/nhm_uc.env", // Adjust if your env file is located elsewhere
+            "cwd": "${workspaceFolder}" // Sets the current working directory
+        },
     ]
 }

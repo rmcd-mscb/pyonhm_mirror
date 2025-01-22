@@ -1,7 +1,7 @@
 # # NHM gridmetetl Image
 #
 # This image contains the out2ncf program.
-FROM nhmusgs/base
+FROM nhmusgs_base
 
 LABEL maintainer="rmcd@usgs.gov"
 

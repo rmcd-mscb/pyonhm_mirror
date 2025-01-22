@@ -1,4 +1,5 @@
 import logging
+import logging.config
 import os
 import pprint
 import re
@@ -46,7 +47,7 @@ def setup_logging(default_path='logging.yaml', default_level=logging.INFO, env_k
             logging.error(f"Error parsing YAML configuration file: {e}")
             logging.basicConfig(level=default_level)
         except Exception as e:
-            logging.error(f"Error loading logging configuration: {e}")
+            logging.exception(f"Error loading logging configuration: {e}")
             logging.basicConfig(level=default_level)
     else:
         logging.basicConfig(level=default_level)
@@ -247,6 +248,43 @@ def get_out2ncf_vars(env_vars: dict, mode: str, ensemble: int = 0):
         tvars = {
             "OUT_WORK_PATH": str(out_work_path),
             "OUT_ROOT_PATH": str(project_root)
+        }
+    else:
+        raise ValueError(f"Unsupported mode: {mode}")
+
+    return tvars
+
+def get_ncf2zarr_vars(env_vars: dict, mode: str, ensemble: int = 0):
+    project_root = Path(env_vars.get("PROJECT_ROOT"))
+    start_date_string = env_vars.get("FRCST_START_DATE")
+
+    if mode == "ensemble":
+        out_work_path = (
+            project_root
+            / "forecast"
+            / "output"
+            / "ensembles"
+            / start_date_string
+        )
+        tvars = {
+            "OUT_WORK_PATH": str(out_work_path),
+            "OUT_ROOT_PATH": str(project_root),
+            "OUT_MODE": str(mode)
+        }
+    elif mode == "median":
+        out_work_path = project_root / "forecast" / "output" / "ensemble_median" / start_date_string
+        tvars = {
+            "OUT_WORK_PATH": str(out_work_path),
+            "OUT_ROOT_PATH": str(project_root),
+            "OUT_MODE": str(mode)
+        }
+    elif mode == "op":
+        op_dir = Path(env_vars.get("OP_DIR"))
+        out_work_path = op_dir / "output"
+        tvars = {
+            "OUT_WORK_PATH": str(out_work_path),
+            "OUT_ROOT_PATH": str(project_root),
+            "OUT_MODE": str(mode)
         }
     else:
         raise ValueError(f"Unsupported mode: {mode}")
