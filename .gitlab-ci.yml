@@ -13,29 +13,7 @@ variables:
   MINIFORGE_URL: "https://github.com/conda-forge/miniforge/releases/latest/download/${MINIFORGE_INSTALLER}"
   PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$CONDA_HOME/bin"
 
-cache:
-  paths:
-    - $CONDA_HOME
-# before_script:
-#   # Update package lists and install dependencies
-#   - apt-get update -y && apt-get install -y wget git curl
 
-# Debug Job to Check PATH and mkdir Availability
-debug_path:
-  stage: debug
-  tags:
-    - shell
-    - docker
-    - conda
-    - pyonhm
-  script:
-    - echo "DEBUG Current PATH is $PATH"
-    - which mkdir
-    - ls -ld /bin/mkdir
-  when: manual
-  allow_failure: true
-
-# Manual Setup Stage
 setup_miniforge:
   stage: setup
   tags:
@@ -44,21 +22,21 @@ setup_miniforge:
     - conda
     - pyonhm
   script:
-    - echo "Installing Miniforge..."
-    # Download Miniforge installer
-    - wget $MINIFORGE_URL -O /tmp/${MINIFORGE_INSTALLER}
-    # Install Miniforge silently
-    - bash /tmp/${MINIFORGE_INSTALLER} -b -p $CONDA_HOME
-    # Initialize Conda
+    - |
+      if [ ! -d "$CONDA_HOME" ]; then
+        echo "Miniforge not found. Installing..."
+        bash /tmp/${MINIFORGE_INSTALLER} -b -p $CONDA_HOME
+      else
+        echo "Miniforge is already installed at $CONDA_HOME"
+      fi
     - source "$CONDA_HOME/etc/profile.d/conda.sh"
-    # Update Conda to the latest version
     - conda update -n base -c defaults conda -y
   artifacts:
     paths:
       - $CONDA_HOME
     expire_in: 1 hour
-  when: manual  # Makes the job manual
-  allow_failure: false  # Pipeline waits for this job to succeed
+  when: manual
+  allow_failure: false
 
 update_cfsv2_data:
   stage: run-operational
