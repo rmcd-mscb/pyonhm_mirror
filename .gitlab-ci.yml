@@ -29,7 +29,7 @@ debug_path:
     - conda
     - pyonhm
   script:
-    - echo "DEBUG: Current PATH is $PATH"
+    - echo "DEBUG Current PATH is $PATH"
     - which mkdir
     - ls -ld /bin/mkdir
   when: manual
