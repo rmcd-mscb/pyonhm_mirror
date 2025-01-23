@@ -50,13 +50,14 @@ clone_repository:
   script:
     - echo "Cloning the repository into the gitlab-runner home directory..."
     # Configure Git to use the PAT for authentication
-    - git config --global url."https://${GITLAB_API_TOKEN}@gitlab.com/".insteadOf "https://gitlab.com/"
+    - git config --global url."https://${GITLAB_API_TOKEN}@code.usgs.gov/".insteadOf "https://code.usgs.gov/"
     # Navigate to the gitlab-runner home directory
     - cd /home/gitlab-runner/
     # Clone or update the repository
     - if [ -d "pyONHM" ]; then cd pyONHM && git pull; else git clone https://code.usgs.gov/wma/national-iwaas/nhm/pyONHM.git; fi
   only:
     - main  # Adjust according to your branch strategy
+  when: manual
 
 
 update_cfsv2_data:
