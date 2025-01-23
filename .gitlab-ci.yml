@@ -48,8 +48,8 @@ clone_repository:
   dependencies:
     - setup_miniforge
   script:
-    - echo "Cloning the repository into the gitlab-runner home directory..."
-    # Configure Git to use the PAT for authentication
+    - echo "Configuring Git to use PATs for authentication..."
+    # Configure Git for code.usgs.gov
     - git config --global url."https://${GITLAB_API_TOKEN}@code.usgs.gov/".insteadOf "https://code.usgs.gov/"
     # Navigate to the gitlab-runner home directory
     - cd /home/gitlab-runner/
