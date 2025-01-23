@@ -49,7 +49,7 @@ clone_repository:
     - setup_miniforge
   script:
     - echo "Cloning the repository..."
-    - git clone git@gitlab.com:rmcd/repository.git
+    - git clone git@gitlab.com:gitlab-runner/repository.git
     - cd repository
   artifacts:
     paths:
