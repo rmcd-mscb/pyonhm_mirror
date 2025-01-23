@@ -16,9 +16,9 @@ variables:
 cache:
   paths:
     - $CONDA_HOME
-before_script:
-  # Update package lists and install dependencies
-  - apt-get update -y && apt-get install -y wget git curl
+# before_script:
+#   # Update package lists and install dependencies
+#   - apt-get update -y && apt-get install -y wget git curl
 
 # Debug Job to Check PATH and mkdir Availability
 debug_path:
