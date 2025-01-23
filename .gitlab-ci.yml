@@ -48,9 +48,15 @@ clone_repository:
   dependencies:
     - setup_miniforge
   script:
-    - cd /home/gitlab-runner/
-    # Clone or update the repository
-    - if [ -d "pyONHM" ]; then cd pyONHM && git pull; else git clone https://${GITLAB_API_TOKEN}@code.usgs.gov/wma/national-iwaas/nhm/pyONHM.git; fi
+   - |
+      if [ -d "your-repo" ]; then
+        echo "Repository already exists. Pulling latest changes."
+        cd your-repo
+        git pull
+      else
+        echo "Cloning repository..."
+        git clone git@code.usgs.gov:gitlab-runner/wma/national-iwaas/nhm/pyONHM.git
+      fi
   only:
     - main  # Adjust according to your branch strategy
   when: manual
