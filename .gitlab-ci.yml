@@ -1,4 +1,5 @@
 stages:
+  - debug
   - setup
   - run-operational
 
@@ -10,7 +11,7 @@ variables:
   LOG_DIR: "$HOME/pyonhm_logs"
   MINIFORGE_INSTALLER: "Miniforge3-Linux-x86_64.sh"
   MINIFORGE_URL: "https://github.com/conda-forge/miniforge/releases/latest/download/${MINIFORGE_INSTALLER}"
-  PATH: "$CONDA_HOME/bin:$PATH"
+  PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$CONDA_HOME/bin"
 
 cache:
   paths:
@@ -18,6 +19,21 @@ cache:
 before_script:
   # Update package lists and install dependencies
   - apt-get update -y && apt-get install -y wget git curl
+
+# Debug Job to Check PATH and mkdir Availability
+debug_path:
+  stage: debug
+  tags:
+    - shell
+    - docker
+    - conda
+    - pyonhm
+  script:
+    - echo "DEBUG: Current PATH is $PATH"
+    - which mkdir
+    - ls -ld /bin/mkdir
+  when: manual
+  allow_failure: true
 
 # Manual Setup Stage
 setup_miniforge:
