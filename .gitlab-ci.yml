@@ -38,6 +38,26 @@ setup_miniforge:
   when: manual
   allow_failure: false
 
+clone_repository:
+  stage: setup
+  tags:
+    - shell
+    - docker
+    - conda
+    - pyonhm
+  dependencies:
+    - setup_miniforge
+  script:
+    - echo "Cloning the repository..."
+    - git clone git@gitlab.com:username/repository.git
+    - cd repository
+  artifacts:
+    paths:
+      - repository
+    expire_in: 1 hour
+  when: manual
+  allow_failure: false
+
 update_cfsv2_data:
   stage: run-operational
   tags:
