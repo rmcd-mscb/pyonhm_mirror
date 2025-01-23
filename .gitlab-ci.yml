@@ -47,7 +47,9 @@ update_hotstart:
     - pyonhm
   script:
   # # Activate the conda environment
+    - source ~/.bashrc
     - conda activate "$CONDA_ENV_NAME"
+    - cd /data/pyONHM
 
     # Run operational model
     - pyonhm run-operational --env-file "$ENV_FILE_PATH"
