@@ -7,6 +7,41 @@ variables:
   CONDA_ENV_NAME: "pyonhm"
   ENV_FILE_PATH: "$CI_PROJECT_DIR/nhm_conus.env"  # Assuming nhm_uc.env is in the repo
   LOG_DIR: "$HOME/pyonhm_logs"
+  MINIFORGE_INSTALLER: "Miniforge3-Linux-x86_64.sh"
+  MINIFORGE_URL: "https://github.com/conda-forge/miniforge/releases/latest/download/${MINIFORGE_INSTALLER}"
+  PATH: "$CONDA_HOME/bin:$PATH"
+
+cache:
+  paths:
+    - $CONDA_HOME
+before_script:
+  # Update package lists and install dependencies
+  - apt-get update -y && apt-get install -y wget git curl
+
+# Manual Setup Stage
+setup_miniforge:
+  stage: setup
+  tags:
+    - shell
+    - docker
+    - conda
+    - pyonhm
+  script:
+    - echo "Installing Miniforge..."
+    # Download Miniforge installer
+    - wget $MINIFORGE_URL -O /tmp/${MINIFORGE_INSTALLER}
+    # Install Miniforge silently
+    - bash /tmp/${MINIFORGE_INSTALLER} -b -p $CONDA_HOME
+    # Initialize Conda
+    - source "$CONDA_HOME/etc/profile.d/conda.sh"
+    # Update Conda to the latest version
+    - conda update -n base -c defaults conda -y
+  artifacts:
+    paths:
+      - $CONDA_HOME
+    expire_in: 1 hour
+  when: manual  # Makes the job manual
+  allow_failure: false  # Pipeline waits for this job to succeed
 
 update_cfsv2_data:
   stage: run-operational
