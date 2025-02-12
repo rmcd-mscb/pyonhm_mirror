@@ -2,7 +2,8 @@
 #
 # This is the base image used to build the NHM pipeline.
 
-FROM condaforge/miniforge3:latest
+# FROM condaforge/miniforge3:latest
+From condaforge/miniforge3:24.3.0-0
 
 LABEL maintainer_1="rmcd@usgs.gov" \
       maintainer_2="ahalper@usgs.gov"
@@ -52,7 +53,7 @@ RUN apt-get update --fix-missing && \
         dialog \
         file \
         gcc \
-        gfortran \
+        gfortran-10 \
         libhdf5-mpich-dev \
         libnetcdf-dev \
         libnetcdff-dev \
@@ -61,6 +62,12 @@ RUN apt-get update --fix-missing && \
         unzip \
         vim && \
     apt-get autoclean && apt-get purge
+
+# Point default 'gfortran' to 'gfortran-10' to ensure at least v10
+RUN update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-10 10
+
+# OPTIONAL: Verify the version if you like. This just prints out the gfortran version.
+RUN gfortran --version
 
 # Copy and update certificates
 COPY DOIRootCA2.cer /usr/local/share/ca-certificates/DOIRootCA2.crt

@@ -22,21 +22,13 @@ setup_miniforge:
     - conda
     - pyonhm
   script:
-    - |
-      if [ ! -d "$CONDA_HOME" ]; then
-        echo "Miniforge not found. Installing..."
-        bash /tmp/${MINIFORGE_INSTALLER} -b -p $CONDA_HOME
-      else
-        echo "Miniforge is already installed at $CONDA_HOME"
-      fi
-    - source "$CONDA_HOME/etc/profile.d/conda.sh"
-    - conda update -n base -c defaults conda -y
-  artifacts:
-    paths:
-      - $CONDA_HOME
-    expire_in: 1 hour
+    # (Optional) Print the current home directory and user to verify the environment.
+    - echo "Running as user: $(whoami)"
+    - echo "Home directory: ${HOME}"
+    # Copy the script to a desired location if needed. Here, we're executing it directly.
+    - chmod +x install_miniforge.sh
+    - ./install_miniforge.sh
   when: manual
-  allow_failure: false
 
 clone_repository:
   stage: setup

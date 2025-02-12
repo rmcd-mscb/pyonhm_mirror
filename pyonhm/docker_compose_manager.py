@@ -7,6 +7,11 @@ import sys
 from cyclopts import App, Group, Parameter
 from pathlib import Path
 from pyonhm import utils
+from rich.pretty import pprint
+from rich.pretty import Pretty
+from rich.panel import Panel
+from rich.table import Table
+from rich.console import Console
 from typing import Optional, Dict, List
 
 utils.setup_logging()
@@ -29,7 +34,6 @@ g_sub_seasonal = Group.create_ordered(
 g_seasonal = Group.create_ordered(
     name="Seasonal Forecast Commands", help="NHM seasonal forecasts model methods"
 )
-
 
 class DockerComposeManager:
     """
@@ -87,7 +91,7 @@ class DockerComposeManager:
             Optional[subprocess.CompletedProcess]: The result of the command execution, or None if an error occurred.
         """
         cmd = self.compose_cmd + command
-        logger.info(f"Running command: {' '.join(cmd)}")
+        logger.info(pprint(cmd))
         env = os.environ.copy()
         if env_vars:
             env.update(env_vars)
@@ -97,8 +101,10 @@ class DockerComposeManager:
             result = subprocess.run(cmd, env=env, capture_output=True, text=True)
             if result.returncode != 0:
                 logger.error(f"Command failed with return code {result.returncode}")
-                logger.error(f"Output: {result.stdout}")
-                logger.error(f"Error Output: {result.stderr}")
+                logger.error("Output:")
+                logger.error("\n" + result.stdout)
+                logger.error("Error Output:")
+                logger.error("\n" + result.stderr)
             return result
         except Exception as e:
             logger.exception("Command execution failed")
@@ -132,6 +138,11 @@ class DockerComposeManager:
         command.append(service_name)
         if command_override:
             command.extend(command_override)
+
+        # logger.info("Running service with the following command:")
+        # temp = pprint(command)
+        # logger.info(temp)
+
         return self.run_compose_command(command, env_vars=env_vars)
 
     def up_service(
@@ -210,7 +221,7 @@ class DockerComposeManager:
                 logger.error(f"Failed to build image for service {service}.")
                 return result
         logger.info("All Docker images built successfully.")
-        return None
+        return True
 
     def load_data(self, env_vars: Dict[str, str]) -> None:
         """

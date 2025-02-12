@@ -1,57 +1,85 @@
 import logging
 import logging.config
 import os
-import pprint
-import re
 from typing import Tuple
 import urllib3
 import xmltodict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from pprint import pprint
-from pprint import pformat
+from rich.logging import RichHandler
+from rich.traceback import install as install_rich_traceback
+from rich.pretty import pprint
 import pytz
+import sys
 import yaml
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
+def configure_rich():
+    # Grab your "pyonhm" logger or the root logger
+    logger = logging.getLogger("pyonhm")
+    for handler in logger.handlers:
+        if isinstance(handler, RichHandler):
+            # Optionally enable extra features
+            handler.rich_tracebacks = True
+            handler.markup = True
+            # If your environment is not TTY but you still want color:
+            handler.force_terminal = True
 
 def setup_logging(default_path='logging.yaml', default_level=logging.INFO, env_key='LOG_CFG'):
-    """Set up logging configuration.
-
-    This function configures the logging settings for the application by loading
-    a configuration from a YAML file specified by an environment variable. If the
-    file does not exist or an error occurs during loading, it falls back to a
-    basic logging configuration with a specified default level.
-
-    Args:
-        default_path (str): The default path to the logging configuration file.
-        default_level (int): The default logging level to use if the configuration file is not found or fails to load.
-        env_key (str): The environment variable key to retrieve the logging configuration file path.
-
-    Returns:
-        None
-
-    Raises:
-        yaml.YAMLError: If there is an error parsing the YAML configuration file.
-        Exception: For any other errors encountered while loading the logging configuration.
     """
+    Configures logging by loading a YAML file. If not found or invalid,
+    falls back to a basic configuration with RichHandler or StreamHandler.
+    """
+    # Install Rich's enhanced traceback
+    install_rich_traceback()
+
     path = os.getenv(env_key, default_path)
+    # Check if we're in a TTY environment
+    rich_supported = sys.stdout.isatty()
+
     if os.path.exists(path):
         try:
             with open(path, 'rt') as f:
                 config = yaml.safe_load(f.read())
+
+            # If not in a TTY, you could forcibly replace the console handler with StreamHandler
+            if not rich_supported and 'handlers' in config and 'console' in config['handlers']:
+                config['handlers']['console'] = {
+                    'class': 'logging.StreamHandler',
+                    'level': 'INFO',
+                    'formatter': 'standard',
+                    'stream': 'ext://sys.stdout',
+                }
+
+            # Apply the logging configuration
             logging.config.dictConfig(config)
+
         except yaml.YAMLError as e:
             logging.error(f"Error parsing YAML configuration file: {e}")
-            logging.basicConfig(level=default_level)
+            _fallback_logging(rich_supported, default_level)
         except Exception as e:
             logging.exception(f"Error loading logging configuration: {e}")
-            logging.basicConfig(level=default_level)
+            _fallback_logging(rich_supported, default_level)
     else:
-        logging.basicConfig(level=default_level)
+        # If logging.yaml does not exist, set up fallback
+        _fallback_logging(rich_supported, default_level)
 
+def _fallback_logging(rich_supported, default_level):
+    """Fallback to basicConfig with RichHandler or StreamHandler if not TTY."""
+    if rich_supported:
+        logging.basicConfig(
+            level=default_level,
+            format="%(message)s",
+            handlers=[RichHandler()]
+        )
+    else:
+        logging.basicConfig(
+            level=default_level,
+            format="%(message)s",
+            handlers=[logging.StreamHandler()]
+        )
 
 def adjust_date_str(date_str, days):
     """
@@ -309,7 +337,8 @@ def get_forecast_median_prms_run_env(env_vars, restart_date):
         "PRMS_INPUT_DIR": str(project_root / "forecast" / "input" / "ensemble_median" / start_date_string),
         "PRMS_OUTPUT_DIR": str(project_root / "forecast" / "output" / "ensemble_median" / start_date_string)
     }
-    logger.debug("PRMS Forecast median run env:\n%s", pformat(prms_env))
+    logger.debug("PRMS Forecast median run env:")
+    logger.degub(pprint(prms_env))
     
     return prms_env
 
@@ -331,7 +360,8 @@ def get_forecast_ensemble_prms_run_env(env_vars, restart_date, n):
         "PRMS_INPUT_DIR": str(project_root / "forecast"/ "input" / "ensembles" / start_date_string / f"ensemble_{int(n)}"),
         "PRMS_OUTPUT_DIR": str(project_root / "forecast"/ "output" / "ensembles" / start_date_string / f"ensemble_{int(n)}"),
     }
-    logger.debug("PRMS Forecast esemble run environment:\n%s", pformat(prms_env))
+    logger.debug("PRMS Forecast esemble run environment:")
+    logger.debug(pprint(prms_env))
     
     return prms_env
 
@@ -363,7 +393,8 @@ def get_prms_run_env(env_vars, restart_date):
     }
     
     # Use pprint to format the dictionary for logging
-    logger.debug("PRMS Operational run environment:\n%s", pformat(prms_env))
+    logger.debug("PRMS Operational run environment:")
+    logger.debug(pprint(prms_env))
     
     return prms_env
 
@@ -404,7 +435,8 @@ def get_prms_restart_env(env_vars):
         "PRMS_INPUT_DIR": str(project_root / "daily" / "input"),
         "PRMS_OUTPUT_DIR": str(project_root / "daily" / "output")
     }
-    logger.debug("PRMS RUN ENV:\n%s", pformat(prms_restart_env))
+    logger.debug("PRMS RUN ENV:")
+    logger.debug(pprint(prms_restart_env))
     
     return prms_restart_env
 
