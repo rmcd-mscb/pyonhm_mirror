@@ -57,7 +57,7 @@ build_conda_env:
     - conda env create -f environment.yml
 
     # (Optional) Activate the environment to check its Python version or list packages
-    - source activate my_conda_env
+    - conda activate pyonhm
     - python --version
     - conda list
 
