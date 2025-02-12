@@ -81,7 +81,7 @@ clone_repo_to_data:
 
     # Clone the repository (replace the URL with your repository's URL)
     - echo "Cloning repository into /data..."
-    - git clone https://code.usgs.gov/wma/national-iwaas/nhm/pyONHM.git
+    - git clone https://${GIT_USERNAME}:${GIT_TOKEN}@code.usgs.gov/wma/national-iwaas/nhm/pyONHM.git
 
     # List the contents of /data to verify the clone
     - echo "Listing /data after cloning:"
