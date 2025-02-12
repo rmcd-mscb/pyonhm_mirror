@@ -58,6 +58,7 @@ build_conda_env:
 
     # (Optional) Activate the environment to check its Python version or list packages
     - conda activate pyonhm
+    - poetry install
     - python --version
     - conda list
 
