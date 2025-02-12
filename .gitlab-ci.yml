@@ -64,6 +64,30 @@ build_conda_env:
 
   when: manual
 
+clone_repo_to_data:
+  stage: setup
+  tags:
+    - shell
+    - docker
+    - conda
+    - pyonhm
+  script:
+    # Check that /data exists and has the proper permissions
+    - echo "Listing /data directory before cloning:"
+    - ls -ld /data
+
+    # Change to /data directory
+    - cd /data
+
+    # Clone the repository (replace the URL with your repository's URL)
+    - echo "Cloning repository into /data..."
+    - git clone https://code.usgs.gov/wma/national-iwaas/nhm/pyONHM.git
+
+    # List the contents of /data to verify the clone
+    - echo "Listing /data after cloning:"
+    - ls -la /data
+  when: manual  # Remove or change if you want the job to run automatically
+
 update_hotstart:
   stage: setup
   tags:
