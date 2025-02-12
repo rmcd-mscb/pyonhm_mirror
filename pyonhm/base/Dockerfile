@@ -34,12 +34,24 @@ LABEL maintainer_1="rmcd@usgs.gov" \
 #    * Vim for development editing
 #        - [vim](https://packages.debian.org/bullseye/vim)
 #
+# Set environment variables
+ENV USERNAME=nhm
+ENV UID=1000
+ENV GID=1000
+ENV NHM_DIR=/nhm
+ENV NHM_BIND_PATH=/data/nhm_bind
 
-# Create nhm group and user first
-RUN groupadd -g 1000 nhm && useradd -u 1000 -g nhm -ms /bin/bash nhm
+# Create a non-root user with a matching UID/GID
+RUN groupadd --gid $GID $USERNAME \
+    && useradd --uid $UID --gid $GID --create-home --shell /bin/bash $USERNAME \
+    && echo "$USERNAME ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
-# Ensure the NHM_SOURCE_DIR exists and has correct permissions
-RUN mkdir -p /usr/local/src && chown -R nhm:nhm /usr/local/src
+# Ensure the /nhm directory exists and is owned by nhm
+RUN mkdir -p $NHM_DIR && chown -R $USERNAME:$USERNAME $NHM_DIR
+
+# Copy an entrypoint script to handle permission adjustments dynamically
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Prevent halting due to tzdata, interactive package config. See
 # https://serverfault.com/questions/84521/automate-dpkg-reconfigure-tzdata
@@ -60,6 +72,10 @@ RUN apt-get update --fix-missing && \
         make \
         procps \
         unzip \
+        curl \
+        wget \
+        sudo \
+        git \
         vim && \
     apt-get autoclean && apt-get purge
 
@@ -72,6 +88,9 @@ RUN gfortran --version
 # Copy and update certificates
 COPY DOIRootCA2.cer /usr/local/share/ca-certificates/DOIRootCA2.crt
 RUN update-ca-certificates
+
+# Switch to non-root user
+USER $USERNAME
 
 # Set environment variables for SSL certificates
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
@@ -120,5 +139,8 @@ ENV NHM_SOURCE_DIR=/usr/local/src
 ENV USER=nhm
 ENV HOMEDIR=/home/$USER
 
-# Set default user to nhm
-USER nhm
+# Set entrypoint
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+
+# Default command
+CMD ["sleep", "infinity"]
