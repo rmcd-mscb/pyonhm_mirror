@@ -30,27 +30,21 @@ setup_miniforge:
     - ./install_miniforge.sh
   when: manual
 
-clone_repository:
+update_hotstart:
   stage: setup
   tags:
     - shell
     - docker
     - conda
     - pyonhm
-  dependencies:
-    - setup_miniforge
   script:
-   - |
-      if [ -d "your-repo" ]; then
-        echo "Repository already exists. Pulling latest changes."
-        cd your-repo
-        git pull
-      else
-        echo "Cloning repository..."
-        git clone git@code.usgs.gov:gitlab-runner/wma/national-iwaas/nhm/pyONHM.git
-      fi
-  only:
-    - main  # Adjust according to your branch strategy
+  # # Activate the conda environment
+    - source ~/.bashrc
+    - conda activate "$CONDA_ENV_NAME"
+    - cd /data/pyONHM
+    # Run operational model
+    - pyonhm run-operational --env-file "$ENV_FILE_PATH"
+  
   when: manual
 
 
