@@ -97,6 +97,7 @@ load_data:
     - conda
     - pyonhm
   script:
+    - source "$HOME/miniforge3/etc/profile.d/conda.sh"
     - conda activate pyonhm
     - cd /data/pyONHM
     - pyonhm load-data --env-file nhm_conus.env
