@@ -12,6 +12,7 @@ variables:
   MINIFORGE_INSTALLER: "Miniforge3-Linux-x86_64.sh"
   MINIFORGE_URL: "https://github.com/conda-forge/miniforge/releases/latest/download/${MINIFORGE_INSTALLER}"
   PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$CONDA_HOME/bin"
+  NHM_BIND_PATH: "/data/nhm_bind"
 
 
 setup_miniforge:
@@ -86,6 +87,19 @@ clone_repo_to_data:
     # List the contents of /data to verify the clone
     - echo "Listing /data after cloning:"
     - ls -la /data
+  when: manual  # Remove or change if you want the job to run automatically
+
+load_data:
+  stage: setup
+  tags:
+    - shell
+    - docker
+    - conda
+    - pyonhm
+  script:
+    - conda activate pyonhm
+    - cd /data/pyONHM
+    - pyonhm load-data --env-file nhm_conus.env
   when: manual  # Remove or change if you want the job to run automatically
 
 update_hotstart:
