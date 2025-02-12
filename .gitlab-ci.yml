@@ -103,6 +103,13 @@ load_data:
     - pyonhm load-data --env-file nhm_conus.env
   when: manual  # Remove or change if you want the job to run automatically
 
+update_permissions:
+  stage: setup
+  script:
+    - sudo chown -R 1000:1000 /data/nhm_bind
+    - sudo chmod -R 775 /data/nhm_bind
+  when: manual
+
 update_hotstart:
   stage: setup
   tags:
