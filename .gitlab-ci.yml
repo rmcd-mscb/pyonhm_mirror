@@ -30,6 +30,31 @@ setup_miniforge:
     - ./install_miniforge.sh
   when: manual
 
+build_conda_env:
+  stage: setup
+  tags:
+    - your-ec2-runner-tag  # Replace this with the tag for your custom EC2 runner
+  script:
+    # Ensure the conda command is available. You can either source the conda.sh file...
+    - if [ -f "${HOME}/miniforge3/etc/profile.d/conda.sh" ]; then source "${HOME}/miniforge3/etc/profile.d/conda.sh"; else echo "conda.sh not found, using direct path"; fi
+
+    # Alternatively, if you prefer not to source, you can use the full path to conda (uncomment the next line and comment the previous line):
+    # - CONDA_EXE="${HOME}/miniforge3/bin/conda"
+
+    # Verify that the environment.yml file exists
+    - if [ ! -f environment.yml ]; then echo "environment.yml not found!"; exit 1; fi
+
+    # Create the conda environment using environment.yml
+    - echo "Creating conda environment from environment.yml..."
+    - conda env create -f environment.yml
+
+    # (Optional) Activate the environment to check its Python version or list packages
+    - source activate my_conda_env
+    - python --version
+    - conda list
+
+  when: manual
+
 update_hotstart:
   stage: setup
   tags:
