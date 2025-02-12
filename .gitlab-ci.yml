@@ -44,6 +44,11 @@ build_conda_env:
     # Alternatively, if you prefer not to source, you can use the full path to conda (uncomment the next line and comment the previous line):
     # - CONDA_EXE="${HOME}/miniforge3/bin/conda"
 
+    - |
+      if [ -d "${HOME}/miniforge3/envs/pyonhm" ]; then
+          conda env remove -n pyonhm -y
+      fi
+
     # Verify that the environment.yml file exists
     - if [ ! -f environment.yml ]; then echo "environment.yml not found!"; exit 1; fi
 
