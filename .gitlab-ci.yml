@@ -23,8 +23,8 @@ setup_miniforge:
     - pyonhm
   script:
     # (Optional) Print the current home directory and user to verify the environment.
-    - echo "Running as user: $(whoami)"
-    - echo "Home directory: ${HOME}"
+    # - echo "Running as user: $(whoami)"
+    # - echo "Home directory: ${HOME}"
     # Copy the script to a desired location if needed. Here, we're executing it directly.
     - chmod +x install_miniforge.sh
     - ./install_miniforge.sh
