@@ -33,7 +33,10 @@ setup_miniforge:
 build_conda_env:
   stage: setup
   tags:
-    - your-ec2-runner-tag  # Replace this with the tag for your custom EC2 runner
+    - shell
+    - docker
+    - conda
+    - pyonhm  # Replace this with the tag for your custom EC2 runner
   script:
     # Ensure the conda command is available. You can either source the conda.sh file...
     - if [ -f "${HOME}/miniforge3/etc/profile.d/conda.sh" ]; then source "${HOME}/miniforge3/etc/profile.d/conda.sh"; else echo "conda.sh not found, using direct path"; fi
