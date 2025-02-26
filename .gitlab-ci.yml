@@ -119,8 +119,8 @@ update_hotstart:
     - pyonhm
   script:
   # # Activate the conda environment
-    - source ~/.bashrc
-    - conda activate "$CONDA_ENV_NAME"
+    - source "$HOME/miniforge3/etc/profile.d/conda.sh"
+    - conda activate pyonhm
     - cd /data/pyONHM
     # Run operational model
     - pyonhm run-operational --env-file "$ENV_FILE_PATH"
