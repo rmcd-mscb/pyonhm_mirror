@@ -48,6 +48,8 @@ RUN groupadd --gid $GID $USERNAME \
 
 # Ensure the /nhm directory exists and is owned by nhm
 RUN mkdir -p $NHM_DIR && chown -R $USERNAME:$USERNAME $NHM_DIR
+RUN mkdir -p /usr/local/src && chown -R nhm:nhm /usr/local/src
+
 
 # Copy an entrypoint script to handle permission adjustments dynamically
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
@@ -59,25 +61,12 @@ RUN ln -fs /usr/share/zoneinfo/UTC /etc/localtime
 
 # Additional Packages and Configuration
 RUN apt-get update --fix-missing && \
-    apt-get -q -y install \
-        apt-utils \
-        ca-certificates \
-        dialog \
-        file \
-        gcc \
-        gfortran-10 \
-        libhdf5-mpich-dev \
-        libnetcdf-dev \
-        libnetcdff-dev \
-        make \
-        procps \
-        unzip \
-        curl \
-        wget \
-        sudo \
-        git \
-        vim && \
+    DEBIAN_FRONTEND=noninteractive apt-get -q -y \
+        -o Dpkg::Options::="--force-confdef" \
+        -o Dpkg::Options::="--force-confold" \
+        install apt-utils ca-certificates dialog file gcc gfortran-10 libhdf5-mpich-dev libnetcdf-dev libnetcdff-dev make procps unzip curl wget sudo git vim && \
     apt-get autoclean && apt-get purge
+
 
 # Point default 'gfortran' to 'gfortran-10' to ensure at least v10
 RUN update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-10 10
@@ -88,9 +77,6 @@ RUN gfortran --version
 # Copy and update certificates
 COPY DOIRootCA2.cer /usr/local/share/ca-certificates/DOIRootCA2.crt
 RUN update-ca-certificates
-
-# Switch to non-root user
-USER $USERNAME
 
 # Set environment variables for SSL certificates
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
@@ -107,8 +93,8 @@ RUN echo "SSL_CERT_FILE=${SSL_CERT_FILE}" && \
     echo "REQUESTS_CA_BUNDLE=${REQUESTS_CA_BUNDLE}"
 
 # Conda and Python Setup
-RUN mamba update -n base mamba -y && \
-    mamba install -n base -c conda-forge -y \
+RUN conda update -n base conda -y && \
+    conda install -n base -c conda-forge -y \
         python=3.11 \
         pip \
         gdptools=0.2.10 \
@@ -123,7 +109,7 @@ RUN mamba update -n base mamba -y && \
         xarray \
         xmltodict \
         pint-xarray && \
-    mamba clean -a
+    conda clean -a
 
 # # ## Source Code Location
 # #
@@ -139,8 +125,11 @@ ENV NHM_SOURCE_DIR=/usr/local/src
 ENV USER=nhm
 ENV HOMEDIR=/home/$USER
 
-# Set entrypoint
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+# Switch to non-root user
+USER $USERNAME
 
-# Default command
-CMD ["sleep", "infinity"]
+# # Set entrypoint
+# ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+
+# # Default command
+# CMD ["sleep", "infinity"]

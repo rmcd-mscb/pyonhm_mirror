@@ -13,7 +13,7 @@ ARG VERSION_TAG_PRMS=v5.2.1
 ARG ZIP_TAG_PRMS=prms-5.2.1
 
 # Ensure the NHM_SOURCE_DIR exists and has correct permissions
-RUN mkdir -p $NHM_SOURCE_DIR && chown -R nhm:nhm $NHM_SOURCE_DIR
+# RUN mkdir -p $NHM_SOURCE_DIR && chown -R nhm:nhm $NHM_SOURCE_DIR
 
 # The PRMS source code is hosted on GitHub (as opposed to CHS GitLab).
 RUN wget -q -P $NHM_SOURCE_DIR \
