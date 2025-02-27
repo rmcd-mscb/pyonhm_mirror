@@ -325,23 +325,24 @@ def merge_netcdf_groups(output_dir):
         
         logger.info(f"Merging {len(file_list)} files for date {date_stamp}...")
         try:
-            files = []
-            for f in file_list:
-                files.append(xr.open_dataset(f))
-            
-            # Open and merge files; adjust the combine option if needed based on file structure.
-            ds = xr.merge(files)
+            # Open files lazily with chunking (adjust chunk size based on your data)
+            ds = xr.open_mfdataset(
+                file_list,
+                combine="by_coords",
+                parallel=True,
+                chunks={"time": 10}  # Adjust chunking as appropriate
+            )
             output_file = os.path.join(output_dir, f"{date_stamp}_daily_output.nc")
             ds.to_netcdf(output_file)
             ds.close()
             logger.info(f"Created merged file: {output_file}")
             
-            # # After successful merge, delete the individual files
+            # Optionally delete individual files after merging.
             # for f in file_list:
             #     os.remove(f)
-            #     print(f"Deleted file: {f}")
+            #     logger.info(f"Deleted file: {f}")
         except Exception as e:
-            logger.info(f"Error merging files for date {date_stamp}: {e}")
+            logger.error(f"Error merging files for date {date_stamp}: {e}")
 
 def update_yearly_master_files(input_dir, output_dir):    
     """
@@ -377,19 +378,20 @@ def update_yearly_master_files(input_dir, output_dir):
     pattern = os.path.join(input_dir, "*_daily_output.nc")
     daily_files = glob.glob(pattern)
     
+    # Group daily files by year
+    year_groups = {}
     for file in daily_files:
-        print(f"Processing file: {file}")
         try:
-            ds = xr.open_dataset(file)
+            # Open a single file lazily to extract the year info
+            ds = xr.open_dataset(file, chunks={"time": 10})
+            unique_years = np.unique(ds["time"].dt.year.values)
+            ds.close()
+            for yr in unique_years:
+                year_groups.setdefault(yr, []).append(file)
         except Exception as e:
-            print(f"Error opening {file}: {e}")
-            continue
-
-        # Determine the unique years present in the dataset’s time coordinate.
-        unique_years = np.unique(ds['time'].dt.year.values)
+            logger.error(f"Error processing file {file}: {e}")
         
-        for yr in unique_years:
-            ds_year = ds.sel(time=ds['time'].dt.year == yr)
+        for yr, files in year_groups.items():
             master_filename = os.path.join(output_dir, f"{yr}_daily_output.nc")
             
             if os.path.exists(master_filename):
@@ -403,29 +405,45 @@ def update_yearly_master_files(input_dir, output_dir):
                     continue
 
                 try:
-                    master_ds = xr.open_dataset(master_filename)
+                    master_ds = xr.open_dataset(master_filename, chunks={"time": 10})
+                    # Open new data files for the year lazily
+                    new_ds = xr.open_mfdataset(
+                        files,
+                        combine="by_coords",
+                        parallel=True,
+                        chunks={"time": 10}
+                    )
                 except Exception as e:
                     print(f"Error opening {master_filename}: {e}")
                     continue
 
                 try:
-                    # Concatenate along the time dimension and remove duplicate times
-                    combined_ds = xr.concat([master_ds, ds_year], dim="time")
+                    # Concatenate along time and remove duplicates
+                    combined_ds = xr.concat([master_ds, new_ds], dim="time")
                     combined_ds = combined_ds.sortby("time")
-                    times = combined_ds['time'].values
+                    times = combined_ds["time"].values
                     _, index = np.unique(times, return_index=True)
                     combined_ds = combined_ds.isel(time=index)
                     master_ds.close()
+                    new_ds.close()
                     combined_ds.to_netcdf(master_filename)
-                    print(f"Updated master file for {yr}: {master_filename}")
+                    logger.info(f"Updated master file for {yr}: {master_filename}")
                 except Exception as e:
                     print(f"Error updating {master_filename}: {e}")
                     continue
             else:
                 try:
-                    ds_year = ds_year.sortby("time")
-                    ds_year.to_netcdf(master_filename)
-                    print(f"Created new master file for {yr}: {master_filename}")
+                    # Create new master file for the year using lazy loading
+                    new_ds = xr.open_mfdataset(
+                        files,
+                        combine="by_coords",
+                        parallel=True,
+                        chunks={"time": 10}
+                    )
+                    new_ds = new_ds.sortby("time")
+                    new_ds.to_netcdf(master_filename)
+                    new_ds.close()
+                    logger.info(f"Created new master file for {yr}: {master_filename}")
                 except Exception as e:
                     print(f"Error creating master file {master_filename}: {e}")
         
