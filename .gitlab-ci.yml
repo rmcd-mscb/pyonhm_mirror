@@ -65,6 +65,36 @@ build_conda_env:
 
   when: manual
 
+clone_repo_to_data_new:
+  stage: setup
+  tags:
+    - shell
+    - docker
+    - conda
+    - pyonhm
+  script:
+    # Check that /data exists and has the proper permissions
+    - echo "Listing /data directory before cloning:"
+    - ls -ld /data
+
+    # Change to /data directory
+    - cd /data
+
+    # Check if the repository exists; if so, pull, else clone it.
+    - |
+      if [ -d "pyONHM/.git" ]; then
+          echo "Repository exists. Pulling latest changes..."
+          cd pyONHM && git pull origin main
+      else
+          echo "Repository does not exist. Cloning repository..."
+          git clone https://${GIT_USERNAME}:${GIT_TOKEN}@code.usgs.gov/wma/national-iwaas/nhm/pyONHM.git
+      fi
+
+    # List the contents of /data to verify the operation
+    - echo "Listing /data after cloning or pulling:"
+    - ls -la /data
+  when: manual
+
 clone_repo_to_data:
   stage: setup
   tags:

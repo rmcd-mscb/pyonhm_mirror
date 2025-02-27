@@ -9,15 +9,19 @@ Updated script based on original script developed by Steve Markstrom, USGS
 """
 
 import argparse
+import glob
 from pathlib import Path
+import shutil
 import pandas as pd
 import json
 import numpy as np
 from netCDF4 import Dataset
 from datetime import datetime
 import logging
+import re
 import sys
 import os
+import xarray as xr
 
 # Configure logging at the very beginning
 logging.basicConfig(
@@ -280,6 +284,154 @@ def convert_variables_to_netcdf(output_path, root_path, variable_info, varnames,
 
         create_netcdf_file(var_name, df, var_meta, georef, output_path)
 
+def merge_netcdf_groups(output_dir):
+    """
+    Merges NetCDF files in the specified output directory that share the same date stamp.
+
+    This function scans the given directory for NetCDF files whose filenames start with an
+    8-digit date stamp followed by an underscore and ending with '.nc'. Files with the same
+    date stamp are grouped together. For each group, the function opens the files using xarray,
+    merges them, and writes the merged dataset to a new NetCDF file named "{date_stamp}_daily_output.nc"
+    in the same directory. Errors during the merge process are logged.
+
+    Args:
+        output_dir (str): The directory containing the NetCDF files to be merged.
+
+    Returns:
+        None
+
+    Raises:
+        Exceptions encountered during file operations or dataset merging are caught and logged.
+    """
+    # Pattern to match files with 8-digit date stamp followed by underscore and anything ending with .nc
+    pattern = re.compile(r"^(\d{8})_.*\.nc$")
+    
+    # Find all matching .nc files in the output directory
+    all_files = [os.path.join(output_dir, f) for f in os.listdir(output_dir) if pattern.match(f)]
+    
+    # Group files by their date stamp
+    groups = {}
+    for filepath in all_files:
+        filename = os.path.basename(filepath)
+        m = pattern.match(filename)
+        if m:
+            date_stamp = m.group(1)
+            groups.setdefault(date_stamp, []).append(filepath)
+    
+    # Process each group
+    for date_stamp, file_list in groups.items():
+        if not file_list:
+            continue
+        
+        logger.info(f"Merging {len(file_list)} files for date {date_stamp}...")
+        try:
+            files = []
+            for f in file_list:
+                files.append(xr.open_dataset(f))
+            
+            # Open and merge files; adjust the combine option if needed based on file structure.
+            ds = xr.merge(files)
+            output_file = os.path.join(output_dir, f"{date_stamp}_daily_output.nc")
+            ds.to_netcdf(output_file)
+            ds.close()
+            logger.info(f"Created merged file: {output_file}")
+            
+            # # After successful merge, delete the individual files
+            # for f in file_list:
+            #     os.remove(f)
+            #     print(f"Deleted file: {f}")
+        except Exception as e:
+            logger.info(f"Error merging files for date {date_stamp}: {e}")
+
+def update_yearly_master_files(input_dir, output_dir):    
+    """
+    Updates yearly master NetCDF files by merging daily output files.
+
+    This function processes daily NetCDF files in the input directory matching the pattern
+    "*_daily_output.nc". For each daily file, it extracts the unique years from the dataset's time
+    coordinate. For each unique year, the function selects the data corresponding to that year and
+    creates or updates a master NetCDF file named "{year}_daily_output.nc" in the output directory.
+    
+    - If the master file already exists, a backup is created (with a '.bak' extension) before merging.
+    - The new yearly data is concatenated with the existing master dataset along the time dimension.
+    - The combined dataset is sorted by time and duplicate times are removed.
+    - If the master file does not exist, a new one is created.
+    
+    Status messages are printed throughout the process.
+
+    Args:
+        input_dir (str): The directory containing daily NetCDF files.
+        output_dir (str): The directory where the yearly master files will be stored.
+
+    Returns:
+        None
+
+    Raises:
+        Exceptions encountered during file I/O or dataset operations are caught and printed.
+    """
+    # Ensure the output directory exists
+    master_out = Path(output_dir) / "master_output"
+    os.makedirs(master_out, exist_ok=True)
+    
+    # Pattern to match files like YYYYMMDD_daily_output.nc
+    pattern = os.path.join(input_dir, "*_daily_output.nc")
+    daily_files = glob.glob(pattern)
+    
+    for file in daily_files:
+        print(f"Processing file: {file}")
+        try:
+            ds = xr.open_dataset(file)
+        except Exception as e:
+            print(f"Error opening {file}: {e}")
+            continue
+
+        # Determine the unique years present in the dataset’s time coordinate.
+        unique_years = np.unique(ds['time'].dt.year.values)
+        
+        for yr in unique_years:
+            ds_year = ds.sel(time=ds['time'].dt.year == yr)
+            master_filename = os.path.join(output_dir, f"{yr}_daily_output.nc")
+            
+            if os.path.exists(master_filename):
+                # Create a backup of the existing master file.
+                backup_filename = master_filename + ".bak"
+                try:
+                    shutil.copy(master_filename, backup_filename)
+                    print(f"Backup created: {backup_filename}")
+                except Exception as e:
+                    print(f"Error creating backup for {master_filename}: {e}")
+                    continue
+
+                try:
+                    master_ds = xr.open_dataset(master_filename)
+                except Exception as e:
+                    print(f"Error opening {master_filename}: {e}")
+                    continue
+
+                try:
+                    # Concatenate along the time dimension and remove duplicate times
+                    combined_ds = xr.concat([master_ds, ds_year], dim="time")
+                    combined_ds = combined_ds.sortby("time")
+                    times = combined_ds['time'].values
+                    _, index = np.unique(times, return_index=True)
+                    combined_ds = combined_ds.isel(time=index)
+                    master_ds.close()
+                    combined_ds.to_netcdf(master_filename)
+                    print(f"Updated master file for {yr}: {master_filename}")
+                except Exception as e:
+                    print(f"Error updating {master_filename}: {e}")
+                    continue
+            else:
+                try:
+                    ds_year = ds_year.sortby("time")
+                    ds_year.to_netcdf(master_filename)
+                    print(f"Created new master file for {yr}: {master_filename}")
+                except Exception as e:
+                    print(f"Error creating master file {master_filename}: {e}")
+        
+        ds.close()
+
+
 def main():
     args = parse_arguments()
 
@@ -430,7 +582,16 @@ def main():
     }
 
     # Convert variables to NetCDF
+    logger.info("Convert variable .csv files to NetCDF files")
     convert_variables_to_netcdf(output_path, root_path, variable_info, VARNAMES, georef_combined)
+
+    # Merge NetCDF files
+    logger.info("Merge variable netcdf files into single output file")
+    merge_netcdf_groups(output_dir=output_path)
+
+    # Merge to master annual NetCDF files
+    logger.info("Merge combined output to annual master file")
+    update_yearly_master_files(input_dir=output_path, output_dir=root_path)
 
 if __name__ == "__main__":
     try:

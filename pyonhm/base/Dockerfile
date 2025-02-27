@@ -3,7 +3,7 @@
 # This is the base image used to build the NHM pipeline.
 
 # FROM condaforge/miniforge3:latest
-From condaforge/miniforge3:24.3.0-0
+FROM condaforge/miniforge3:24.3.0-0
 
 LABEL maintainer_1="rmcd@usgs.gov" \
       maintainer_2="ahalper@usgs.gov"
