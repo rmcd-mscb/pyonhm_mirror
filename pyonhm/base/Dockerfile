@@ -51,9 +51,9 @@ RUN mkdir -p $NHM_DIR && chown -R $USERNAME:$USERNAME $NHM_DIR
 RUN mkdir -p /usr/local/src && chown -R nhm:nhm /usr/local/src
 
 
-# Copy an entrypoint script to handle permission adjustments dynamically
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+# # Copy an entrypoint script to handle permission adjustments dynamically
+# COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+# RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Prevent halting due to tzdata, interactive package config. See
 # https://serverfault.com/questions/84521/automate-dpkg-reconfigure-tzdata
