@@ -97,7 +97,7 @@ RUN conda update -n base conda -y && \
     conda install -n base -c conda-forge -y \
         python=3.11 \
         pip \
-        gdptools=0.2.10 \
+        gdptools=0.2.17 \
         cyclopts \
         dask \
         bottleneck \
