@@ -39,8 +39,8 @@ LABEL maintainer="rmcd@usgs.gov"
 # RUN chmod 744 /usr/local/bin/prms
 
 # Copy the pre-built PRMS executable from the local 'bin' directory into /usr/local/bin
-COPY --chown=nhm bin/prms_5_2_1_1 /usr/local/bin/prms
-RUN chmod 744 /usr/local/bin/prms
+COPY --chown=nhm bin/prms_5_2_1_1 /usr/local/src/bin/prms
+RUN chmod 744 /usr/local/src/bin/prms
 
 # Copy the Python entrypoint script
 COPY --chown=nhm run_prms.py /usr/local/bin/run_prms.py

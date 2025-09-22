@@ -103,7 +103,8 @@ def read_csv_data(csv_path):
     try:
         df = pd.read_csv(csv_path, parse_dates=['Date'], dayfirst=False)
         df.rename(columns={'Date': 'time'}, inplace=True)
-        df['time'] = pd.to_datetime(df['time'], format='%m/%d/%Y')
+        # df['time'] = pd.to_datetime(df['time'], format='%m/%d/%Y')
+        df['time'] = pd.to_datetime(df['time'], format='%Y-%m-%d')
         # logger.info(f"Read {len(df)} time steps from {csv_path}")
         return df
     except Exception as e:

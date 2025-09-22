@@ -35,8 +35,8 @@ def create_ensemble_zarr(base_dir, output_zarr_path):
     for ens_dir in ensemble_dirs:
         # Use xarray to open all NetCDF files in the ensemble directory.
         file_pattern = os.path.join(ens_dir, "*.nc")
-        ds = xr.open_mfdataset(file_pattern, combine='by_coords', parallel=True, chunks={})
-
+        ds = xr.open_mfdataset(file_pattern, combine='by_coords', par
+allel=True, chunks={})
         # Extract ensemble index from folder name, e.g., ensemble_0 -> 0
         ens_index = int(os.path.basename(ens_dir).split('_')[-1])
         ds = ds.expand_dims(ensemble=[ens_index])

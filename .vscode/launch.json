@@ -12,9 +12,9 @@
             "console": "integratedTerminal",
             "args": [
                 "--output-path",
-                "${workspaceFolder}/daily/output",
+                "/home/rmcd/nhm-bind/NHM_PRMS_UC_GF_1_1/daily/output",
                 "--root-path",
-                "/mnt/d/oNHM/NHM_PRMS_CONUS_GF_1_1/"
+                "/home/rmcd/nhm-bind/NHM_PRMS_UC_GF_1_1"
             ]
         },
         {

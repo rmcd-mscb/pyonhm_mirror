@@ -304,23 +304,24 @@ class DockerComposeManager:
         """
         logger.info("Checking if model test data exists...")
 
-        check_path = env_vars["PROJECT_ROOT"]
+        check_path = env_vars["PROJECT_TEST_ROOT"]
         service_name = "base"
 
         # Validate required environment variables
-        if "PRMS_TEST_DATA_PKG" not in env_vars:
+        if "PRMS_TEST_SOURCE" not in env_vars or "PRMS_TEST_DATA_PKG" not in env_vars:
             logger.error(
-                "Missing required environment variables: PRMS_TEST_DATA_PKG"
+                "Missing required environment variables: PRMS_TEST_SOURCE or PRMS_TEST_DATA_PKG"
             )
             return
 
         # Quote paths and variables to ensure safety
         check_path_quote = shlex.quote(check_path)
+        prms_test_source = shlex.quote(env_vars["PRMS_TEST_SOURCE"])
         prms_test_data_pkg = shlex.quote(env_vars["PRMS_TEST_DATA_PKG"])
 
         # Define the download commands
         prms_test_download_commands = [
-            # f"wget --waitretry=3 --retry-connrefused --timeout=30 --tries=10 {prms_test_source}",
+            f"wget --waitretry=3 --retry-connrefused --timeout=30 --tries=10 {prms_test_source}",
             f"unzip {prms_test_data_pkg}",
             f"chown -R nhm:nhm {check_path}",
             f"chmod -R 766 {check_path}",
@@ -350,18 +351,18 @@ class DockerComposeManager:
         check_path = env_vars["PROJECT_ROOT"]
         service_name = "base"
 
-        if "PRMS_DATA_PKG" not in env_vars:
+        if "PRMS_SOURCE" not in env_vars or "PRMS_DATA_PKG" not in env_vars:
             logger.error(
-                "Missing required environment variables: PRMS_DATA_PKG"
+                "Missing required environment variables: PRMS_SOURCE or PRMS_DATA_PKG"
             )
             return
 
         check_path_quote = shlex.quote(check_path)
-        # prms_source = shlex.quote(env_vars["PRMS_SOURCE"])
+        prms_source = shlex.quote(env_vars["PRMS_SOURCE"])
         prms_data_pkg = shlex.quote(env_vars["PRMS_DATA_PKG"])
 
         download_commands = [
-            # f"wget --waitretry=3 --retry-connrefused --timeout=30 --tries=10 {prms_source}",
+            f"wget --waitretry=3 --retry-connrefused --timeout=30 --tries=10 {prms_source}",
             f"unzip {prms_data_pkg}",
             f"chown -R nhm:nhm {check_path}",
             f"chmod -R 766 {check_path}",
@@ -370,7 +371,7 @@ class DockerComposeManager:
         self.download_data_if_not_exists(
             env_vars=env_vars,
             service_name=service_name,
-            check_path=check_path,
+            check_path=check_path_quote,
             download_commands=download_commands,
         )
 
