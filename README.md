@@ -6,7 +6,7 @@ forcings on a daily basis.  In addition sub-seasonal to seasonal forecasts can a
 product of 48, 28-day ensembles, delivered daily, and seaonal forecasts using downscaled NMME product of 6-month forecasts,
 delivered once per month.
 
-<span style="color: red; font-weight: bold;">Attention:</span> This project is in the early stages of development,
+**__Attention:__** This project is in the early stages of development,  
 particularly the forecasting elements.
 
 ## Getting started
@@ -19,43 +19,133 @@ mamba activate pyonhm
 poetry install
 ```
 
+## Docker Volume Strategy
+
+This project uses a Docker bind mount to share data between the host machine and the Docker services. This strategy allows for direct access to input and output files from your local filesystem.
+
+### Configuration
+
+You must set the `NHM_BIND_PATH` environment variable on your host system. This variable should point to an absolute path on your machine where you want to store the model data.
+
+**Example:**
+
+```shell
+export NHM_BIND_PATH=/path/to/my/nhm_data
+```
+
+This local directory will be mounted to `/nhm` inside each Docker container. All services read from and write to this shared directory, which makes it easy to inspect results and manage data from your host machine.
+
 ## Command Line Interface
 
 ```text
-Usage: pyonhm COMMAND
+Usage: pyonhm [OPTIONS] COMMAND [ARGS]...
 
-╭─ Admin Commands ───────────────────────────────────────────╮
-│ Build images and load supporting data into volume          │
-│                                                            │
-│ build-images  Builds Docker images using the               │
-│               DockerManager.                               │
-│ load-data     Loads data using the DockerManager.          │
-╰────────────────────────────────────────────────────────────╯
-╭─ Operational Commands ─────────────────────────────────────╮
-│ NHM daily operational model methods                        │
-│                                                            │
-│ fetch-op-results  Fetches operational results using the    │
-│                   DockerManager.                           │
-│ run-operational   Runs the operational simulation using    │
-│                   the DockerManager.                       │
-╰────────────────────────────────────────────────────────────╯
-╭─ Sub-seasonal Forecast Commands ───────────────────────────╮
-│ NHM sub-seasonal forecasts model methods                   │
-│                                                            │
-│ run-sub-seasonal  Runs the sub-seasonal operational        │
-│                   simulation using the DockerManager.      │
-╰────────────────────────────────────────────────────────────╯
-╭─ Seasonal Forecast Commands ───────────────────────────────╮
-│ NHM seasonal forecasts model methods                       │
-│                                                            │
-│ run-seasonal  Runs the seasonal operational simulation     │
-│               using the DockerManager.                     │
-╰────────────────────────────────────────────────────────────╯
-╭─ Commands ─────────────────────────────────────────────────╮
-│ --help,-h  Display this message and exit.                  │
-│ --version  Display application version.                    │
-╰────────────────────────────────────────────────────────────╯
+╭─ Admin Commands ───────────────────────────────────────────────────────────╮
+│ Build images and load supporting data into volume                          │
+│                                                                            │
+│ build-images          Builds all Docker images using the                   │
+│                       DockerComposeManager.                                │
+│ load-data             Loads data using the DockerComposeManager.           │
+╰────────────────────────────────────────────────────────────────────────────╯
+╭─ Operational Commands ─────────────────────────────────────────────────────╮
+│ NHM daily operational model methods                                        │
+│                                                                            │
+│ fetch-op-results      Fetches operational results using the DockerManager. │
+│ run-operational       Runs the operational simulation using the            │
+│                       DockerComposeManager.                                │
+╰────────────────────────────────────────────────────────────────────────────╯
+╭─ Sub-seasonal Forecast Commands ───────────────────────────────────────────╮
+│ NHM sub-seasonal forecasts model methods                                   │
+│                                                                            │
+│ conv-output-to-zarr   Runs the sub-seasonal operational simulation using   │
+│                       the DockerManager.                                   │
+│ run-sub-seasonal      Runs the sub-seasonal operational simulation using   │
+│                       the DockerManager.                                   │
+│ run-update-cfsv2-data Runs the update of CFSv2 data using the specified    │
+│                       method , either 'ensemble' or 'median'.              │
+╰────────────────────────────────────────────────────────────────────────────╯
+╭─ Seasonal Forecast Commands ───────────────────────────────────────────────╮
+│ NHM seasonal forecasts model methods                                       │
+│                                                                            │
+│ run-seasonal          Runs the seasonal operational simulation using the   │
+│                       DockerManager.                                       │
+╰────────────────────────────────────────────────────────────────────────────╯
+╭─ Commands ─────────────────────────────────────────────────────────────────╮
+│ --help,-h             Display this message and exit.                       │
+│ --version             Display application version.                         │
+╰────────────────────────────────────────────────────────────────────────────╯
 ```
+
+## GitLab CI/CD Orchestration (In-Progress)
+
+An incomplete GitLab CI/CD pipeline is defined in `.gitlab-ci.yml` to automate the execution of the `pyonhm` model. The pipeline is designed to run on a custom GitLab Runner with `shell`, `docker`, and `conda` tags.
+
+The pipeline consists of two main stages:
+
+1. **Setup**: This stage includes jobs for:
+    * `setup_miniforge`: Installs Miniforge (a minimal conda installer).
+    * `build_conda_env`: Creates the `pyonhm` conda environment from `environment.yml` and installs dependencies with `poetry`.
+    * `clone_repo_to_data`: Clones the project repository into a `/data` directory on the runner.
+    * `load_data`: Runs `pyonhm load-data` to download the necessary model data.
+    * `update_hotstart`: Runs `pyonhm run-operational` to get the latest hotstart file.
+
+2. **Run-Operational**: This stage is intended to be run on a schedule and contains the core logic for the model execution:
+    * `update_cfsv2_data`: Updates the CFSv2 forecast data for both `median` and `ensemble` methods.
+    * Runs the operational model with `pyonhm run-operational`.
+    * Runs the sub-seasonal forecasts for both `median` and `ensemble` methods.
+
+This pipeline is still under development but provides a logical sequence for how the `pyonhm` CLI commands are intended to be used in an automated workflow.
+
+## Notebooks for Data Pre-processing
+
+The notebooks in the `notebooks/` directory are used to pre-process the raw model data (a "bandit pull") into the structured format required by `pyonhm`. This structured data is what is included in the `NHM_PRMS_CONUS_GF_1_1.zip` and `NHM_PRMS_UC_GF_1_1.zip` files.
+
+The key notebook for the full CONUS dataset is `prep_conus_case.ipynb`. For development and testing, the `prep_uc_case.ipynb` notebook is used to create a smaller, more manageable test case for the Upper Colorado (UC) basin. This allows for rapid testing of the `pyonhm` commands and the Docker orchestration.
+
+The general workflow demonstrated in these notebooks is:
+
+1. **Load and Clean Geometries**: Reads the NHM shapefiles (`model_nhru.shp`, `model_nsegment.shp`) using `geopandas`, corrects any invalid geometries, and re-projects them to `EPSG:4326`.
+2. **Extract Parameters**: Reads essential parameters like `nhm_id`, `hru_lat`, `hru_lon`, and `hru_elev` directly from the `myparam.param` file. These are saved as CSV files.
+3. **Extract Segment Data**: Calculates and saves the latitude and longitude of stream segment centroids (`seg_lat.csv`, `seg_lon.csv`).
+4. **Generate Gridmet Weights**: Uses `gdptools` to generate the spatial weights file (`uc_weights.csv` or similar) required to map GridMET climate data to the NHM HRUs.
+
+These notebooks are not part of the operational `pyonhm` workflow but are a critical part of the initial data setup.
+
+## Docker Services
+
+The `pyonhm` application is built around a set of Docker services, each responsible for a specific stage in the hydrologic modeling pipeline. All services are built from a common `nhmusgs_base` image and share data via a bind mount to `/nhm` on the host.
+
+### `base`
+
+* **Dockerfile**: `pyonhm/base/Dockerfile`
+* **Purpose**: This is the foundational image for all other services. It includes the base conda environment with all necessary scientific libraries (`gdptools`, `xarray`, `geopandas`, etc.), build tools (`gfortran`, `make`), and a non-root user (`nhm`). It also handles certificate management for secure connections.
+
+### `gridmetetl` & `cfsv2etl`
+
+* **Dockerfiles**: `pyonhm/gridmetetl/Dockerfile`, `pyonhm/cfsv2etl/Dockerfile`
+* **Purpose**: These services are responsible for fetching climate data. Both use local wrapper scripts (`run_gridmetetl` and `run_cfsv2etl`) that call the `gridmet-etl` Python package with different configurations. The `gridmet-etl` package is installed from a GitHub repository (`https://github.com/rmcd-mscb/gridmet-etl.git`) in the base image and is capable of handling multiple data sources.
+  * `gridmetetl`: Fetches historical GridMET data for operational runs.
+  * `cfsv2etl`: Fetches CFSv2 (Climate Forecast System Version 2) forecast data for sub-seasonal and seasonal runs.
+
+### `ncf2cbh`
+
+* **Dockerfile**: `pyonhm/ncf2cbh/Dockerfile`
+* **Purpose**: Converts NetCDF climate data files into the CBH (Climate by HRU) format that PRMS requires. It uses a Python script (`ncf2cbh_gfv11_embedded.py`) and a shell wrapper (`ncf2cbh`).
+
+### `prms`
+
+* **Dockerfile**: `pyonhm/prms/Dockerfile`
+* **Purpose**: Executes the core PRMS (Precipitation-Runoff Modeling System) model. This service copies a pre-compiled PRMS executable (`prms_5_2_1_1`) and uses a Python entrypoint (`run_prms.py`) to dynamically pass control parameters to the model.
+
+### `out2ncf`
+
+* **Dockerfile**: `pyonhm/out2ncf/Dockerfile`
+* **Purpose**: Converts the binary output files from PRMS into the NetCDF format for easier analysis and visualization. It uses the `out2ncf.py` script.
+
+### `ncf2zarr`
+
+* **Dockerfile**: `pyonhm/ncf2zarr/Dockerfile`
+* **Purpose**: Converts the NetCDF output files into the Zarr format. This is particularly useful for handling large, multi-dimensional forecast ensemble data, as it allows for efficient, chunked access. It uses the `ncf2zarr.py` script.
 
 ## License
 
